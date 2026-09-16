@@ -30,7 +30,8 @@ An OpenAPI Specification (OAS) editor.
 ### Tech stack
 - Language/runtime: Java 25 (LTS)
 - Build tool: Maven
-- UI framework: JavaFX, themed with [AtlantaFX](https://github.com/mkpaz/atlantafx) (Primer Light) instead of the default JavaFX/Modena look. Shared pane-building helpers live in `no.maddin.oasbuddy.desktop.pane.FormFields` (`root()`, `grid()`, `heading()`) — every editor pane uses them for consistent spacing/typography rather than hand-rolling layout per pane.
+- UI framework: JavaFX, themed with [AtlantaFX](https://github.com/mkpaz/atlantafx) (Primer Light/Dark, switchable via View menu) instead of the default JavaFX/Modena look. Shared pane-building helpers live in `no.maddin.oasbuddy.desktop.pane.FormFields` (`root()`, `grid()`, `heading()`) — every editor pane uses them for consistent spacing/typography rather than hand-rolling layout per pane.
+- Theme choice (light/dark) persists across runs via `java.util.prefs.Preferences` (`MainApp.PREFS`, key `"theme"`) — plain JDK API, no extra dependency. If more settings accumulate later (window size, recent files), reconsider in favor of a JSON settings file for structured data; `Preferences` was chosen for now because theme is the only persisted setting.
 - OAS document tree: Jackson (jackson-databind, jackson-dataformat-yaml)
 - OAS validation: swagger-parser v3 / swagger-core
 - Testing: JUnit 5 (core), TestFX (desktop, minimal for MVP)

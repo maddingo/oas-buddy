@@ -51,8 +51,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.prefs.Preferences;
 
 public class MainApp extends Application {
+
+    private static final Preferences PREFS = Preferences.userNodeForPackage(MainApp.class);
+    private static final String THEME_PREF_KEY = "theme";
+    private static final String THEME_DARK = "dark";
+    private static final String THEME_LIGHT = "light";
 
     private final OasValidator validator = new OasValidator();
 
@@ -66,13 +72,14 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
+        boolean darkTheme = THEME_DARK.equals(PREFS.get(THEME_PREF_KEY, THEME_LIGHT));
+        setTheme(darkTheme);
 
         this.stage = primaryStage;
         this.document = OasDocument.newDocument(DocumentFormat.YAML);
 
         BorderPane root = new BorderPane();
-        root.setTop(buildMenuBar());
+        root.setTop(buildMenuBar(darkTheme));
 
         outlineView = new TreeView<>();
         outlineView.getSelectionModel().selectedItemProperty().addListener((obs, oldItem, newItem) -> {
@@ -117,7 +124,7 @@ public class MainApp extends Application {
         return spacer;
     }
 
-    private MenuBar buildMenuBar() {
+    private MenuBar buildMenuBar(boolean darkTheme) {
         MenuItem open = new MenuItem("Open...");
         open.setOnAction(e -> openFile());
 
@@ -133,18 +140,26 @@ public class MainApp extends Application {
         Menu fileMenu = new Menu("File", null, open, save, saveAs, exit);
 
         ToggleGroup themeGroup = new ToggleGroup();
-        RadioMenuItem lightTheme = new RadioMenuItem("Light");
-        lightTheme.setToggleGroup(themeGroup);
-        lightTheme.setSelected(true);
-        lightTheme.setOnAction(e -> Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet()));
+        RadioMenuItem lightThemeItem = new RadioMenuItem("Light");
+        lightThemeItem.setToggleGroup(themeGroup);
+        lightThemeItem.setSelected(!darkTheme);
+        lightThemeItem.setOnAction(e -> setTheme(false));
 
-        RadioMenuItem darkTheme = new RadioMenuItem("Dark");
-        darkTheme.setToggleGroup(themeGroup);
-        darkTheme.setOnAction(e -> Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet()));
+        RadioMenuItem darkThemeItem = new RadioMenuItem("Dark");
+        darkThemeItem.setToggleGroup(themeGroup);
+        darkThemeItem.setSelected(darkTheme);
+        darkThemeItem.setOnAction(e -> setTheme(true));
 
-        Menu viewMenu = new Menu("View", null, lightTheme, darkTheme);
+        Menu viewMenu = new Menu("View", null, lightThemeItem, darkThemeItem);
 
         return new MenuBar(fileMenu, viewMenu);
+    }
+
+    private void setTheme(boolean dark) {
+        Application.setUserAgentStylesheet(dark
+                ? new PrimerDark().getUserAgentStylesheet()
+                : new PrimerLight().getUserAgentStylesheet());
+        PREFS.put(THEME_PREF_KEY, dark ? THEME_DARK : THEME_LIGHT);
     }
 
     private void openFile() {
