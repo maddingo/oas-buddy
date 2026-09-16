@@ -185,6 +185,19 @@
                   <linuxShortcut>true</linuxShortcut>
                 </configuration>
               </execution>
+              <execution>
+                <!-- Portable app-image (no OS installer), tarred up in CI for direct download/
+                     manual install, and as the fetch target for a future AUR -bin package. -->
+                <id>jpackage-app-image</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jpackage</goal>
+                </goals>
+                <configuration>
+                  <type>APP_IMAGE</type>
+                  <destination>${jpackage.destination}</destination>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
         </plugins>

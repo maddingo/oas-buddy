@@ -42,11 +42,15 @@ mvn -Djpackage package     # builds the installer(s) for whichever OS you're on
 
 Produces, in `oas-buddy-desktop/target/dist/`:
 
-| OS | Installer type(s) |
+| OS | Output |
 |---|---|
-| Linux | `.deb` and `.rpm` |
+| Linux | `.deb`, `.rpm`, and a portable app-image (own JVM, no installer) |
 | macOS | `.pkg` |
 | Windows | `.exe` |
+
+The Linux app-image is for direct download/manual install, and the future fetch target for an
+AUR `-bin` package on Arch/CachyOS (real AUR packaging isn't set up yet). The `package.yml`
+workflow tars it as `oas-buddy-linux-x86_64.tar.gz`.
 
 Each installer bundles its own JVM, so the target machine doesn't need Java installed. This is
 opt-in (`-Djpackage`) and only activates for the OS you're actually running on, so a plain

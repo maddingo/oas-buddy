@@ -44,6 +44,16 @@ jobs:
         shell: bash
         run: mvn -B -DskipTests -Djpackage ${{ steps.version.outputs.mavenArgs }} package
 
+      - name: Tar the portable app-image
+        # Only the Linux profile produces an APP_IMAGE (for a future AUR -bin package etc.);
+        # tar it and drop the raw directory so later globs of target/dist/* only see files.
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          cd oas-buddy-desktop/target/dist
+          tar czf oas-buddy-linux-x86_64.tar.gz "OAS Buddy"
+          rm -rf "OAS Buddy"
+
       - uses: actions/upload-artifact@v7
         with:
           name: oas-buddy-${{ matrix.os }}
