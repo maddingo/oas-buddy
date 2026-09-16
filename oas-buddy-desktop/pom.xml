@@ -17,7 +17,11 @@
   <description>JavaFX desktop application for OAS Buddy.</description>
 
   <properties>
-    <javafx.mainClass>no.maddin.oasbuddy.desktop.MainApp</javafx.mainClass>
+    <javafx.mainClass>no.maddin.oasbuddy.desktop.Launcher</javafx.mainClass>
+    <!-- jpackage's app version rejects a "-SNAPSHOT" suffix, so this is kept separate from project.version -->
+    <jpackage.appVersion>0.1.0</jpackage.appVersion>
+    <jpackage.input>${project.build.directory}/jpackage-input</jpackage.input>
+    <jpackage.destination>${project.build.directory}/dist</jpackage.destination>
   </properties>
 
   <dependencies>
@@ -60,5 +64,214 @@
         </configuration>
       </plugin>
     </plugins>
+    <pluginManagement>
+      <plugins>
+        <!-- Assembles target/jpackage-input: the app jar plus every runtime dependency, flat.
+             jpackage packages a directory of jars, not a Maven reactor. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.11.0</version>
+          <executions>
+            <execution>
+              <id>jpackage-copy-dependencies</id>
+              <phase>package</phase>
+              <goals>
+                <goal>copy-dependencies</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${jpackage.input}</outputDirectory>
+                <includeScope>runtime</includeScope>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>3.2.0</version>
+          <executions>
+            <execution>
+              <id>jpackage-copy-app-jar</id>
+              <phase>package</phase>
+              <goals>
+                <goal>run</goal>
+              </goals>
+              <configuration>
+                <target>
+                  <copy file="${project.build.directory}/${project.build.finalName}.jar" todir="${jpackage.input}"/>
+                </target>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.panteleyev</groupId>
+          <artifactId>jpackage-maven-plugin</artifactId>
+          <version>1.8.0</version>
+          <configuration>
+            <name>OAS Buddy</name>
+            <appVersion>${jpackage.appVersion}</appVersion>
+            <vendor>OAS Buddy</vendor>
+            <description>${project.description}</description>
+            <input>${jpackage.input}</input>
+            <mainJar>${project.build.finalName}.jar</mainJar>
+            <mainClass>${javafx.mainClass}</mainClass>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
+
+  <profiles>
+    <profile>
+      <!-- activates on `mvn -Djpackage package` when running on Linux -->
+      <id>jpackage-linux</id>
+      <activation>
+        <property>
+          <name>jpackage</name>
+        </property>
+        <os>
+          <name>Linux</name>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.panteleyev</groupId>
+            <artifactId>jpackage-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>jpackage-deb</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jpackage</goal>
+                </goals>
+                <configuration>
+                  <destination>${jpackage.destination}</destination>
+                  <type>DEB</type>
+                  <linuxPackageName>oas-buddy</linuxPackageName>
+                  <linuxAppCategory>Development</linuxAppCategory>
+                  <linuxDebMaintainer>mgoldhahn@gmail.com</linuxDebMaintainer>
+                  <linuxShortcut>true</linuxShortcut>
+                </configuration>
+              </execution>
+              <execution>
+                <id>jpackage-rpm</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jpackage</goal>
+                </goals>
+                <configuration>
+                  <type>RPM</type>
+                  <destination>${jpackage.destination}</destination>
+                  <linuxPackageName>oas-buddy</linuxPackageName>
+                  <linuxAppCategory>Development</linuxAppCategory>
+                  <linuxRpmLicenseType>Apache-2.0</linuxRpmLicenseType>
+                  <linuxShortcut>true</linuxShortcut>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <!-- activates on `mvn -Djpackage package` when running on macOS -->
+      <id>jpackage-mac</id>
+      <activation>
+        <property>
+          <name>jpackage</name>
+        </property>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.panteleyev</groupId>
+            <artifactId>jpackage-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>jpackage-pkg</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jpackage</goal>
+                </goals>
+                <configuration>
+                  <type>PKG</type>
+                  <destination>${jpackage.destination}</destination>
+                  <macPackageIdentifier>no.maddin.oasbuddy.desktop</macPackageIdentifier>
+                  <macPackageName>OAS Buddy</macPackageName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <!-- activates on `mvn -Djpackage package` when running on Windows -->
+      <id>jpackage-windows</id>
+      <activation>
+        <property>
+          <name>jpackage</name>
+        </property>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.panteleyev</groupId>
+            <artifactId>jpackage-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>jpackage-exe</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jpackage</goal>
+                </goals>
+                <configuration>
+                  <type>EXE</type>
+                  <destination>${jpackage.destination}</destination>
+                  <winMenu>true</winMenu>
+                  <winShortcut>true</winShortcut>
+                  <winDirChooser>true</winDirChooser>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

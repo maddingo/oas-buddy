@@ -38,6 +38,13 @@ An OpenAPI Specification (OAS) editor.
 
 ### CI
 - GitHub Actions (`.github/workflows/ci.yml`): builds and runs the full test suite (Java 25, `mvn test`) on push to `master` and on pull requests. The desktop module's TestFX tests need a display, so the job runs under Xvfb (`xvfb-run -a mvn -B test`).
+- GitHub Actions (`.github/workflows/package.yml`): builds native installers (.deb/.rpm/.pkg/.exe) via `jpackage` across an ubuntu/macos/windows matrix. Triggered manually or on a `v*` tag push, not on every push/PR — jpackage needs OS-native tools (dpkg-deb, rpmbuild, Xcode command line tools, WiX Toolset) that only exist on their respective OS, so this can't run as a single job. Installers are always uploaded as workflow-run artifacts; on a tag push they're additionally attached to the matching GitHub Release via `softprops/action-gh-release` (creating the release if it doesn't exist yet).
+
+### Packaging (jpackage)
+- `oas-buddy-desktop/pom.xml` has three OS-gated Maven profiles (`jpackage-linux` → DEB + RPM, `jpackage-mac` → PKG, `jpackage-windows` → EXE), each producing a self-contained native installer (bundled JVM, no separate Java install needed on the target machine) via the `org.panteleyev:jpackage-maven-plugin`.
+- Opt-in only: profiles activate on `-Djpackage` (combined with an OS check), so a plain `mvn package` is unaffected. Run `mvn -Djpackage package` on the target OS — the matching profile is picked automatically. Output lands in `oas-buddy-desktop/target/dist/`.
+- Requires `dpkg-deb` (Linux/DEB), `rpmbuild` (Linux/RPM), Xcode command line tools (macOS/PKG), or WiX Toolset (Windows/EXE) to be installed locally — all preinstalled on GitHub's hosted runners except `rpmbuild` on Ubuntu, which the `package.yml` workflow installs explicitly.
+- `jpackage --app-version` rejects a `-SNAPSHOT` suffix, so the desktop module tracks a separate `jpackage.appVersion` property instead of reusing `project.version` directly.
 
 ### Error handling principles
 - Malformed YAML/JSON on open: show error with line/column, never crash.

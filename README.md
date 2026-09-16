@@ -26,3 +26,34 @@ mvn javafx:run                  # run the desktop app
 The `javafx:run` plugin prefix only resolves correctly when Maven is invoked from inside
 `oas-buddy-desktop` itself; running it from the repo root via `-pl oas-buddy-desktop -am` fails
 with "No plugin found for prefix 'javafx'".
+
+**Running from an IDE:** run `no.maddin.oasbuddy.desktop.Launcher`, not `MainApp`, as the main
+class. `MainApp` extends `javafx.application.Application` directly, and the JVM refuses to launch
+a main class that does that from a plain classpath (no module-path) — even with the JavaFX jars
+present — failing with "JavaFX runtime components are missing". `Launcher` is a plain class that
+delegates to `MainApp`, which sidesteps that check.
+
+## Packaging a native installer
+
+```
+cd oas-buddy-desktop
+mvn -Djpackage package     # builds the installer(s) for whichever OS you're on
+```
+
+Produces, in `oas-buddy-desktop/target/dist/`:
+
+| OS | Installer type(s) |
+|---|---|
+| Linux | `.deb` and `.rpm` |
+| macOS | `.pkg` |
+| Windows | `.exe` |
+
+Each installer bundles its own JVM, so the target machine doesn't need Java installed. This is
+opt-in (`-Djpackage`) and only activates for the OS you're actually running on, so a plain
+`mvn package` is unaffected.
+
+Requires the OS-native packaging tool to be installed: `dpkg-deb`/`rpmbuild` on Linux, Xcode
+command line tools on macOS, or the [WiX Toolset](https://wixtoolset.org/) on Windows — all
+preinstalled on GitHub's hosted runners except `rpmbuild`. The `.github/workflows/package.yml`
+workflow builds all four installers across an OS matrix; trigger it manually or by pushing a `v*`
+tag.

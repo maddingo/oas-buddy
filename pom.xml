@@ -11,7 +11,7 @@
 
   <name>OAS Buddy</name>
   <description>An OpenAPI Specification editor.</description>
-  <url>https://github.com/oas-buddy/oas-buddy</url>
+  <url>https://github.com/maddingo/oas-buddy</url>
 
   <licenses>
     <license>
@@ -26,7 +26,9 @@
   </modules>
 
   <properties>
+    <maven.compiler.source>25</maven.compiler.source>
     <maven.compiler.release>25</maven.compiler.release>
+    <maven.compiler.target>25</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <jackson.version>2.19.0</jackson.version>
