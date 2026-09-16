@@ -28,8 +28,20 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            v="${GITHUB_REF_NAME#v}"
+            echo "mavenArgs=-Drevision=$v -Djpackage.appVersion=$v" >> "$GITHUB_OUTPUT"
+          else
+            echo "mavenArgs=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build installer(s) for this OS
-        run: mvn -B -DskipTests -Djpackage package
+        shell: bash
+        run: mvn -B -DskipTests -Djpackage ${{ steps.version.outputs.mavenArgs }} package
 
       - uses: actions/upload-artifact@v7
         with:

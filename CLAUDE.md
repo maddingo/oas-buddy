@@ -38,13 +38,19 @@ An OpenAPI Specification (OAS) editor.
 
 ### CI
 - GitHub Actions (`.github/workflows/ci.yml`): builds and runs the full test suite (Java 25, `mvn test`) on push to `master` and on pull requests. The desktop module's TestFX tests need a display, so the job runs under Xvfb (`xvfb-run -a mvn -B test`).
-- GitHub Actions (`.github/workflows/package.yml`): builds native installers (.deb/.rpm/.pkg/.exe) via `jpackage` across an ubuntu/macos/windows matrix. Triggered manually or on a `v*` tag push, not on every push/PR — jpackage needs OS-native tools (dpkg-deb, rpmbuild, Xcode command line tools, WiX Toolset) that only exist on their respective OS, so this can't run as a single job. Installers are always uploaded as workflow-run artifacts; on a tag push they're additionally attached to the matching GitHub Release via `softprops/action-gh-release` (creating the release if it doesn't exist yet).
+- GitHub Actions (`.github/workflows/package.yml`): builds native installers (.deb/.rpm/.pkg/.exe) via `jpackage` across an ubuntu/macos/windows matrix. Triggered manually or on a `v*` tag push, not on every push/PR — jpackage needs OS-native tools (dpkg-deb, rpmbuild, Xcode command line tools, WiX Toolset) that only exist on their respective OS, so this can't run as a single job. Installers are always uploaded as workflow-run artifacts; on a tag push they're additionally attached to the matching GitHub Release via `softprops/action-gh-release` (creating the release if it doesn't exist yet), using the version extracted from the tag name (see Versioning below).
+- GitHub Actions (`.github/workflows/release.yml`): manual (`workflow_dispatch`, takes a `version` input) — creates and pushes an annotated `vX.Y.Z` tag. That's it; no commits, no POM changes. Pushing the tag is what triggers `package.yml` to actually build and publish the release.
+
+### Versioning
+- CI-friendly versions: the POMs never hold a real version. Root `pom.xml` declares `<version>${revision}</version>` with `<revision>0.1.0-SNAPSHOT</revision>` as the default (used by every ordinary local/CI build); both child modules' `<parent><version>` also reference `${revision}`. A release build overrides it with `-Drevision=X.Y.Z` — nothing in git ever needs a version-bump commit.
+- Rejected: `maven-release-plugin` — it commits and pushes directly to the branch twice (version bump, next-`-SNAPSHOT` bump) and tags itself, which fights GitHub's branch-protection/PR-based workflow more than it helps, and was overkill for this project's needs.
+- To cut a release: run the `Release` workflow with a version (e.g. `1.2.0`) → it tags `v1.2.0` → `package.yml` picks that up, builds installers with `-Drevision=1.2.0 -Djpackage.appVersion=1.2.0`, and attaches them to the GitHub Release for that tag.
 
 ### Packaging (jpackage)
 - `oas-buddy-desktop/pom.xml` has three OS-gated Maven profiles (`jpackage-linux` → DEB + RPM, `jpackage-mac` → PKG, `jpackage-windows` → EXE), each producing a self-contained native installer (bundled JVM, no separate Java install needed on the target machine) via the `org.panteleyev:jpackage-maven-plugin`.
 - Opt-in only: profiles activate on `-Djpackage` (combined with an OS check), so a plain `mvn package` is unaffected. Run `mvn -Djpackage package` on the target OS — the matching profile is picked automatically. Output lands in `oas-buddy-desktop/target/dist/`.
 - Requires `dpkg-deb` (Linux/DEB), `rpmbuild` (Linux/RPM), Xcode command line tools (macOS/PKG), or WiX Toolset (Windows/EXE) to be installed locally — all preinstalled on GitHub's hosted runners except `rpmbuild` on Ubuntu, which the `package.yml` workflow installs explicitly.
-- `jpackage --app-version` rejects a `-SNAPSHOT` suffix, so the desktop module tracks a separate `jpackage.appVersion` property instead of reusing `project.version` directly.
+- `jpackage --app-version` rejects a `-SNAPSHOT` suffix, so the desktop module tracks a separate `jpackage.appVersion` property (default `0.1.0`) instead of reusing `project.version`/`revision` directly — a release build sets both to the same value explicitly (see Versioning above).
 
 ### Error handling principles
 - Malformed YAML/JSON on open: show error with line/column, never crash.

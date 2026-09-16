@@ -57,3 +57,11 @@ command line tools on macOS, or the [WiX Toolset](https://wixtoolset.org/) on Wi
 preinstalled on GitHub's hosted runners except `rpmbuild`. The `.github/workflows/package.yml`
 workflow builds all four installers across an OS matrix; trigger it manually or by pushing a `v*`
 tag.
+
+## Releasing
+
+Versions are CI-friendly (`${revision}`, default `0.1.0-SNAPSHOT`) — the POMs never carry a real
+version, so there's nothing to bump in git. To cut a release, run the **Release** workflow
+(Actions tab → Release → Run workflow) with a version like `1.2.0`. It tags `v1.2.0` and pushes
+it; that tag push triggers `package.yml`, which builds the installers with that version baked in
+and attaches them to the GitHub Release for `v1.2.0` (created automatically).
