@@ -1,9 +1,10 @@
 package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.model.Info;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 
 public final class InfoPane {
 
@@ -11,22 +12,25 @@ public final class InfoPane {
     }
 
     public static Node build(Info info) {
-        GridPane grid = new GridPane();
-        grid.setHgap(8);
-        grid.setVgap(8);
-        grid.setPadding(new Insets(12));
-
+        GridPane general = FormFields.grid();
         int row = 0;
-        FormFields.textRow(grid, row++, "Title", info::getTitle, info::setTitle);
-        FormFields.textRow(grid, row++, "Version", info::getVersion, info::setVersion);
-        FormFields.textAreaRow(grid, row++, "Description", info::getDescription, info::setDescription);
-        FormFields.textRow(grid, row++, "Terms of service", info::getTermsOfService, info::setTermsOfService);
-        FormFields.textRow(grid, row++, "Contact name", () -> info.getContact().getName(), v -> info.getContact().setName(v));
-        FormFields.textRow(grid, row++, "Contact url", () -> info.getContact().getUrl(), v -> info.getContact().setUrl(v));
-        FormFields.textRow(grid, row++, "Contact email", () -> info.getContact().getEmail(), v -> info.getContact().setEmail(v));
-        FormFields.textRow(grid, row++, "License name", () -> info.getLicense().getName(), v -> info.getLicense().setName(v));
-        FormFields.textRow(grid, row, "License url", () -> info.getLicense().getUrl(), v -> info.getLicense().setUrl(v));
+        FormFields.textRow(general, row++, "Title", info::getTitle, info::setTitle);
+        FormFields.textRow(general, row++, "Version", info::getVersion, info::setVersion);
+        FormFields.textAreaRow(general, row++, "Description", info::getDescription, info::setDescription);
+        FormFields.textRow(general, row, "Terms of service", info::getTermsOfService, info::setTermsOfService);
 
-        return grid;
+        GridPane contact = FormFields.grid();
+        FormFields.textRow(contact, 0, "Name", () -> info.getContact().getName(), v -> info.getContact().setName(v));
+        FormFields.textRow(contact, 1, "Url", () -> info.getContact().getUrl(), v -> info.getContact().setUrl(v));
+        FormFields.textRow(contact, 2, "Email", () -> info.getContact().getEmail(), v -> info.getContact().setEmail(v));
+
+        GridPane license = FormFields.grid();
+        FormFields.textRow(license, 0, "Name", () -> info.getLicense().getName(), v -> info.getLicense().setName(v));
+        FormFields.textRow(license, 1, "Url", () -> info.getLicense().getUrl(), v -> info.getLicense().setUrl(v));
+
+        return FormFields.root(
+                new VBox(10, FormFields.heading("General"), general),
+                new TitledPane("Contact", contact),
+                new TitledPane("License", license));
     }
 }

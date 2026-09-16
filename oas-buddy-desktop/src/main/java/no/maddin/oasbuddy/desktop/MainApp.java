@@ -17,8 +17,13 @@ import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
 import no.maddin.oasbuddy.desktop.pane.ServersPane;
+import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
+import atlantafx.base.theme.Styles;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -28,11 +33,16 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -56,6 +66,8 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
+
         this.stage = primaryStage;
         this.document = OasDocument.newDocument(DocumentFormat.YAML);
 
@@ -69,24 +81,40 @@ public class MainApp extends Application {
             }
         });
         outlineView.setPrefWidth(240);
+        outlineView.getStyleClass().add(Styles.DENSE);
 
         centerHolder = new BorderPane();
+        centerHolder.getStyleClass().add(Styles.BG_SUBTLE);
+
+        Label validationHeading = new Label("Validation");
+        validationHeading.getStyleClass().add(Styles.TITLE_4);
+        Button validateButton = new Button("Validate");
+        validateButton.getStyleClass().add(Styles.ACCENT);
+        validateButton.setOnAction(e -> runValidation());
+        HBox validationHeader = new HBox(8, validationHeading, spacer(), validateButton);
+        validationHeader.setAlignment(Pos.CENTER_LEFT);
 
         validationList = new ListView<>();
         validationList.setPrefHeight(120);
-        Button validateButton = new Button("Validate");
-        validateButton.setOnAction(e -> runValidation());
-        VBox validationBox = new VBox(4, new HBox(8, new Label("Validation"), validateButton), validationList);
+
+        VBox validationBox = new VBox(6, validationHeader, validationList);
+        validationBox.setPadding(new Insets(10, 12, 12, 12));
 
         root.setLeft(outlineView);
         root.setCenter(centerHolder);
-        root.setBottom(validationBox);
+        root.setBottom(new VBox(new Separator(), validationBox));
 
         refreshOutline();
 
         stage.setTitle("OAS Buddy");
-        stage.setScene(new Scene(root, 1000, 700));
+        stage.setScene(new Scene(root, 1100, 750));
         stage.show();
+    }
+
+    private static Node spacer() {
+        var spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private MenuBar buildMenuBar() {
@@ -103,7 +131,20 @@ public class MainApp extends Application {
         exit.setOnAction(e -> Platform.exit());
 
         Menu fileMenu = new Menu("File", null, open, save, saveAs, exit);
-        return new MenuBar(fileMenu);
+
+        ToggleGroup themeGroup = new ToggleGroup();
+        RadioMenuItem lightTheme = new RadioMenuItem("Light");
+        lightTheme.setToggleGroup(themeGroup);
+        lightTheme.setSelected(true);
+        lightTheme.setOnAction(e -> Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet()));
+
+        RadioMenuItem darkTheme = new RadioMenuItem("Dark");
+        darkTheme.setToggleGroup(themeGroup);
+        darkTheme.setOnAction(e -> Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet()));
+
+        Menu viewMenu = new Menu("View", null, lightTheme, darkTheme);
+
+        return new MenuBar(fileMenu, viewMenu);
     }
 
     private void openFile() {

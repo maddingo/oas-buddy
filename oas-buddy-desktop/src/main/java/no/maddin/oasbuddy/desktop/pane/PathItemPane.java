@@ -2,13 +2,12 @@ package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.model.HttpMethod;
 import no.maddin.oasbuddy.core.model.PathItem;
-import javafx.geometry.Insets;
+import atlantafx.base.theme.Styles;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
 
 public final class PathItemPane {
 
@@ -16,19 +15,17 @@ public final class PathItemPane {
     }
 
     public static Node build(PathItem pathItem, Runnable onStructureChanged) {
-        GridPane grid = new GridPane();
-        grid.setHgap(8);
-        grid.setVgap(8);
-
+        GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Summary", pathItem::getSummary, pathItem::setSummary);
         FormFields.textAreaRow(grid, row, "Description", pathItem::getDescription, pathItem::setDescription);
 
-        FlowPane methodButtons = new FlowPane(6, 6);
+        FlowPane methodButtons = new FlowPane(8, 8);
         var existing = pathItem.getOperations().keySet();
         for (HttpMethod method : HttpMethod.values()) {
             if (!existing.contains(method)) {
                 Button addButton = new Button("+ " + method.name());
+                addButton.getStyleClass().addAll(Styles.SMALL, Styles.BUTTON_OUTLINED);
                 addButton.setOnAction(e -> {
                     pathItem.addOperation(method);
                     onStructureChanged.run();
@@ -37,8 +34,9 @@ public final class PathItemPane {
             }
         }
 
-        VBox root = new VBox(12, grid, new Label("Add operation:"), methodButtons);
-        root.setPadding(new Insets(12));
-        return root;
+        Label addOperationLabel = new Label("Add operation");
+        addOperationLabel.getStyleClass().add(Styles.TEXT_MUTED);
+
+        return FormFields.root(FormFields.heading("Path"), grid, addOperationLabel, methodButtons);
     }
 }

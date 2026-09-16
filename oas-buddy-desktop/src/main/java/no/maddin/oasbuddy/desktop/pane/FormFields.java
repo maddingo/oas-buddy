@@ -1,10 +1,14 @@
 package no.maddin.oasbuddy.desktop.pane;
 
+import atlantafx.base.theme.Styles;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -12,6 +16,27 @@ import java.util.function.Supplier;
 final class FormFields {
 
     private FormFields() {
+    }
+
+    /** A top-level pane body: consistent outer spacing/padding for every editor pane. */
+    static VBox root(Node... sections) {
+        VBox box = new VBox(18, sections);
+        box.setPadding(new Insets(16));
+        return box;
+    }
+
+    /** A form grid with the standard column/row gaps used across every editor pane. */
+    static GridPane grid() {
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        return grid;
+    }
+
+    static Label heading(String text) {
+        Label label = new Label(text);
+        label.getStyleClass().add(Styles.TITLE_4);
+        return label;
     }
 
     static TextField textRow(GridPane grid, int row, String label, Supplier<String> getter, Consumer<String> setter) {

@@ -5,7 +5,8 @@ import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.Parameter;
 import no.maddin.oasbuddy.core.model.RequestBody;
 import no.maddin.oasbuddy.core.model.Responses;
-import javafx.geometry.Insets;
+import atlantafx.base.theme.Styles;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -25,10 +26,7 @@ public final class OperationPane {
     }
 
     public static Node build(Operation operation, Supplier<List<String>> schemaNames) {
-        GridPane grid = new GridPane();
-        grid.setHgap(8);
-        grid.setVgap(8);
-
+        GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
         FormFields.textRow(grid, row++, "Summary", operation::getSummary, operation::setSummary);
@@ -40,22 +38,24 @@ public final class OperationPane {
                         ? List.of()
                         : List.of(value.split("\\s*,\\s*"))));
 
-        VBox parametersBox = new VBox(6);
+        VBox parametersBox = new VBox(8);
         refreshParameters(operation, parametersBox);
         Button addParameterButton = new Button("Add parameter");
+        addParameterButton.getStyleClass().add(Styles.ACCENT);
         addParameterButton.setOnAction(e -> {
             operation.addParameter("newParam", "query");
             refreshParameters(operation, parametersBox);
         });
 
-        VBox requestBodyBox = new VBox(6);
+        VBox requestBodyBox = new VBox(8);
         buildRequestBody(operation, requestBodyBox, schemaNames);
 
-        VBox responsesBox = new VBox(6);
+        VBox responsesBox = new VBox(8);
         refreshResponses(operation, responsesBox, schemaNames);
         TextField statusCodeField = new TextField();
         statusCodeField.setPromptText("status code, e.g. 200");
         Button addResponseButton = new Button("Add response");
+        addResponseButton.getStyleClass().add(Styles.ACCENT);
         addResponseButton.setOnAction(e -> {
             String code = statusCodeField.getText();
             if (code != null && !code.isBlank()) {
@@ -65,13 +65,11 @@ public final class OperationPane {
             }
         });
 
-        VBox root = new VBox(16,
-                grid,
-                new Label("Parameters"), parametersBox, addParameterButton,
-                new Label("Request body"), requestBodyBox,
-                new Label("Responses"), responsesBox, new HBox(6, statusCodeField, addResponseButton));
-        root.setPadding(new Insets(12));
-        return root;
+        return FormFields.root(
+                FormFields.heading("Operation"), grid,
+                FormFields.heading("Parameters"), parametersBox, addParameterButton,
+                FormFields.heading("Request body"), requestBodyBox,
+                FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton));
     }
 
     private static void refreshParameters(Operation operation, VBox box) {
@@ -93,11 +91,14 @@ public final class OperationPane {
             typeField.setPromptText("type");
             typeField.textProperty().addListener((obs, oldVal, newVal) -> parameter.getSchema().setType(newVal));
 
-            box.getChildren().add(new HBox(6,
+            HBox row = new HBox(8,
                     new Label("Name"), nameField,
                     new Label("In"), inBox,
                     requiredBox,
-                    new Label("Type"), typeField));
+                    new Label("Type"), typeField);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.getStyleClass().add(Styles.BORDERED);
+            box.getChildren().add(row);
         }
     }
 
@@ -105,6 +106,7 @@ public final class OperationPane {
         RequestBody existing = operation.getRequestBody();
         if (existing == null) {
             Button addButton = new Button("Add request body");
+            addButton.getStyleClass().add(Styles.ACCENT);
             addButton.setOnAction(e -> {
                 operation.addRequestBody();
                 buildRequestBody(operation, box, schemaNames);
@@ -126,10 +128,13 @@ public final class OperationPane {
         schemaBox.valueProperty().addListener((obs, oldVal, newVal) ->
                 existing.getSchema("application/json").setRef(newVal == null ? null : "#/components/schemas/" + newVal));
 
-        box.getChildren().setAll(new HBox(6,
+        HBox row = new HBox(8,
                 requiredBox,
                 new Label("Description"), descriptionField,
-                new Label("Schema (application/json)"), schemaBox));
+                new Label("Schema (application/json)"), schemaBox);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add(Styles.BORDERED);
+        box.getChildren().setAll(row);
     }
 
     private static void refreshResponses(Operation operation, VBox box, Supplier<List<String>> schemaNames) {
@@ -148,16 +153,20 @@ public final class OperationPane {
                     response.getSchema("application/json").setRef(newVal == null ? null : "#/components/schemas/" + newVal));
 
             Button removeButton = new Button("Remove");
+            removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
             removeButton.setOnAction(e -> {
                 responses.removeResponse(statusCode);
                 refreshResponses(operation, box, schemaNames);
             });
 
-            box.getChildren().add(new HBox(6,
+            HBox row = new HBox(8,
                     new Label(statusCode),
                     new Label("Description"), descriptionField,
                     new Label("Schema"), schemaBox,
-                    removeButton));
+                    removeButton);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.getStyleClass().add(Styles.BORDERED);
+            box.getChildren().add(row);
         }
     }
 

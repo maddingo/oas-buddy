@@ -1,13 +1,12 @@
 package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.model.Schemas;
-import javafx.geometry.Insets;
+import atlantafx.base.theme.Styles;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 
 public final class SchemasPane {
 
@@ -15,12 +14,15 @@ public final class SchemasPane {
     }
 
     public static Node build(Schemas schemas, Runnable onStructureChanged) {
-        VBox root = new VBox(8);
-        root.setPadding(new Insets(12));
+        Label existing = new Label(schemas.names().isEmpty()
+                ? "No schemas yet."
+                : "Existing schemas: " + String.join(", ", schemas.names()));
+        existing.getStyleClass().add(Styles.TEXT_MUTED);
 
         TextField nameField = new TextField();
         nameField.setPromptText("SchemaName");
         Button addButton = new Button("Add schema");
+        addButton.getStyleClass().add(Styles.ACCENT);
         addButton.setOnAction(e -> {
             String name = nameField.getText();
             if (name != null && !name.isBlank()) {
@@ -30,9 +32,6 @@ public final class SchemasPane {
             }
         });
 
-        root.getChildren().addAll(
-                new Label("Existing schemas: " + String.join(", ", schemas.names())),
-                new HBox(6, nameField, addButton));
-        return root;
+        return FormFields.root(FormFields.heading("Schemas"), existing, new HBox(8, nameField, addButton));
     }
 }

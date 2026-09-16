@@ -86,5 +86,37 @@
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <!-- Without this, a standalone `mvn install` writes the literal, unresolved "${revision}"
+           text into the installed POM (it only resolves within a live reactor build), which then
+           breaks any later separate build - e.g. `cd oas-buddy-desktop && mvn javafx:run` - that
+           tries to resolve oas-buddy-core as a dependency from the local repo. This rewrites the
+           installed/deployed POM with the real version baked in, leaving pom.xml itself alone. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.8.0</version>
+        <configuration>
+          <flattenMode>resolveCiFriendliesOnly</flattenMode>
+          <updatePomFile>true</updatePomFile>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>flatten-clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

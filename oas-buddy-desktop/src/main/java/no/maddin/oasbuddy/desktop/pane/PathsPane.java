@@ -1,13 +1,12 @@
 package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.model.Paths;
-import javafx.geometry.Insets;
+import atlantafx.base.theme.Styles;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 
 public final class PathsPane {
 
@@ -15,12 +14,15 @@ public final class PathsPane {
     }
 
     public static Node build(Paths paths, Runnable onStructureChanged) {
-        VBox root = new VBox(8);
-        root.setPadding(new Insets(12));
+        Label existing = new Label(paths.pathNames().isEmpty()
+                ? "No paths yet."
+                : "Existing paths: " + String.join(", ", paths.pathNames()));
+        existing.getStyleClass().add(Styles.TEXT_MUTED);
 
         TextField pathField = new TextField();
         pathField.setPromptText("/example/{id}");
         Button addButton = new Button("Add path");
+        addButton.getStyleClass().add(Styles.ACCENT);
         addButton.setOnAction(e -> {
             String path = pathField.getText();
             if (path != null && !path.isBlank()) {
@@ -30,9 +32,6 @@ public final class PathsPane {
             }
         });
 
-        root.getChildren().addAll(
-                new Label("Existing paths: " + String.join(", ", paths.pathNames())),
-                new HBox(6, pathField, addButton));
-        return root;
+        return FormFields.root(FormFields.heading("Paths"), existing, new HBox(8, pathField, addButton));
     }
 }
