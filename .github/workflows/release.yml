@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   tag:
@@ -29,3 +30,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
           git push origin "v${{ inputs.version }}"
+
+      - name: Trigger package workflow
+        # A tag pushed using the default GITHUB_TOKEN does not fire other workflows' `push`
+        # triggers (GitHub's anti-recursion guard), so package.yml has to be started explicitly.
+        # --ref points it at the tag we just pushed, so it builds and releases that commit.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run package.yml --ref "v${{ inputs.version }}"
