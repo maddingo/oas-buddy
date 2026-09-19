@@ -1,6 +1,6 @@
-<img src="docs/branding/oas-buddy-icon.svg" width="88" align="left" alt="">
-
 # OAS Buddy
+
+<img src="docs/branding/oas-buddy-icon.svg" width="88" align="left" alt="">
 
 [![CI](https://github.com/maddingo/oas-buddy/actions/workflows/ci.yml/badge.svg)](https://github.com/maddingo/oas-buddy/actions/workflows/ci.yml)
 
