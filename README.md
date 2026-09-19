@@ -71,7 +71,7 @@ tag.
 
 ## Releasing
 
-Versions are CI-friendly (`${revision}`, default `0.1.0-SNAPSHOT`) — the POMs never carry a real
+Versions are CI-friendly (`${revision}`) — the POMs never carry a real
 version, so there's nothing to bump in git. To cut a release, run the **Release** workflow
 (Actions tab → Release → Run workflow) with a version like `1.2.0`. It tags `v1.2.0` and pushes
 it; that tag push triggers `package.yml`, which builds the installers with that version baked in
