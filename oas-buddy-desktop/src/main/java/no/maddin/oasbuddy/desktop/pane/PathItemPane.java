@@ -1,24 +1,48 @@
 package no.maddin.oasbuddy.desktop.pane;
 
+import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.HttpMethod;
+import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.PathItem;
 import atlantafx.base.theme.Styles;
+import javafx.geometry.HPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
+
+import java.util.Map;
+import java.util.function.Consumer;
 
 public final class PathItemPane {
 
     private PathItemPane() {
     }
 
-    public static Node build(PathItem pathItem, Runnable onStructureChanged) {
+    /**
+     * @param onStructureChanged  run after an operation is added, so the outline picks it up
+     * @param onRemovePath        asked to remove this whole path
+     * @param onRemoveOperation   asked to remove one of its operations; like the other panes this
+     *                            one only reports the request, it never removes anything itself
+     */
+    public static Node build(OasDocument document, String path, Runnable onStructureChanged,
+                             Runnable onRemovePath, Consumer<HttpMethod> onRemoveOperation) {
+        PathItem pathItem = document.getPaths().getPathItem(path);
+
         GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Summary", pathItem::getSummary, pathItem::setSummary);
         FormFields.textAreaRow(grid, row, "Description", pathItem::getDescription, pathItem::setDescription);
+
+        GridPane operations = FormFields.grid();
+        operations.setId("path-operations");
+        ColumnConstraints operationColumn = FormFields.column(HPos.LEFT, Priority.NEVER);
+        operationColumn.setMinWidth(260);
+        operations.getColumnConstraints().addAll(operationColumn, FormFields.column(HPos.LEFT, Priority.NEVER));
+        fillOperations(pathItem, operations, onRemoveOperation);
 
         FlowPane methodButtons = new FlowPane(8, 8);
         var existing = pathItem.getOperations().keySet();
@@ -37,6 +61,31 @@ public final class PathItemPane {
         Label addOperationLabel = new Label("Add operation");
         addOperationLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
-        return FormFields.root(FormFields.heading("Path"), grid, addOperationLabel, methodButtons);
+        return FormFields.root(
+                FormFields.headerWithDelete("Path", "delete-path", "Delete path", onRemovePath), grid,
+                FormFields.heading("Operations"), operations,
+                addOperationLabel, methodButtons);
+    }
+
+    private static void fillOperations(PathItem pathItem, GridPane operations,
+                                       Consumer<HttpMethod> onRemoveOperation) {
+        Map<HttpMethod, Operation> existing = pathItem.getOperations();
+        if (existing.isEmpty()) {
+            Label empty = new Label("No operations yet.");
+            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            operations.add(empty, 0, 0, 2, 1);
+            return;
+        }
+
+        operations.addRow(0, FormFields.columnHeading("Operation"));
+
+        int row = 1;
+        for (var entry : existing.entrySet()) {
+            HttpMethod method = entry.getKey();
+            Button removeButton = new Button("Remove");
+            removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
+            removeButton.setOnAction(e -> onRemoveOperation.accept(method));
+            operations.addRow(row++, new Label(PathRemoval.label(method, entry.getValue())), removeButton);
+        }
     }
 }

@@ -1,8 +1,9 @@
 package no.maddin.oasbuddy.desktop.pane;
 
+import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.Schema;
 import atlantafx.base.theme.Styles;
-import javafx.geometry.Pos;
+import javafx.geometry.HPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -10,18 +11,26 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.Priority;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public final class SchemaPane {
 
     private static final List<String> TYPES = List.of("object", "array", "string", "integer", "number", "boolean");
+    private static final double TYPE_COLUMN_WIDTH = 140;
 
     private SchemaPane() {
     }
 
-    public static Node build(Schema schema) {
+    /**
+     * @param onRemoveSchema asked to remove this schema; the pane only reports the request, it
+     *                       never removes anything itself
+     */
+    public static Node build(OasDocument document, String schemaName, Consumer<String> onRemoveSchema) {
+        Schema schema = document.getComponents().getSchemas().getSchema(schemaName);
+
         GridPane grid = FormFields.grid();
         int row = 0;
         ComboBox<String> typeBox = new ComboBox<>();
@@ -39,8 +48,8 @@ public final class SchemaPane {
                         ? List.of()
                         : List.of(value.split("\\s*,\\s*"))));
 
-        VBox propertiesBox = new VBox(8);
-        refreshProperties(schema, propertiesBox);
+        GridPane propertiesGrid = propertiesGrid();
+        refreshProperties(schema, propertiesGrid);
 
         TextField propertyNameField = new TextField();
         propertyNameField.setPromptText("propertyName");
@@ -51,41 +60,70 @@ public final class SchemaPane {
             if (name != null && !name.isBlank()) {
                 schema.addProperty(name.strip());
                 propertyNameField.clear();
-                refreshProperties(schema, propertiesBox);
+                refreshProperties(schema, propertiesGrid);
             }
         });
 
         return FormFields.root(
-                FormFields.heading("Schema"), grid,
-                FormFields.heading("Properties"), propertiesBox, new HBox(8, propertyNameField, addPropertyButton));
+                FormFields.headerWithDelete("Schema", "delete-schema", "Delete schema",
+                        () -> onRemoveSchema.accept(schemaName)), grid,
+                FormFields.heading("Properties"), propertiesGrid,
+                new HBox(8, propertyNameField, addPropertyButton));
     }
 
-    private static void refreshProperties(Schema schema, VBox box) {
-        box.getChildren().clear();
-        for (String name : schema.propertyNames()) {
+    /**
+     * One shared grid for all property rows, so the name/type/format/remove columns line up
+     * regardless of how long the individual property names are.
+     */
+    private static GridPane propertiesGrid() {
+        GridPane grid = FormFields.grid();
+        grid.setId("schema-properties");
+        grid.getColumnConstraints().addAll(
+                FormFields.column(HPos.LEFT, Priority.NEVER),
+                FormFields.column(HPos.LEFT, Priority.NEVER),
+                FormFields.column(HPos.LEFT, Priority.ALWAYS),
+                FormFields.column(HPos.RIGHT, Priority.NEVER));
+        return grid;
+    }
+
+    private static void refreshProperties(Schema schema, GridPane grid) {
+        grid.getChildren().clear();
+
+        List<String> names = schema.propertyNames();
+        if (names.isEmpty()) {
+            Label empty = new Label("No properties yet.");
+            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            grid.add(empty, 0, 0, 4, 1);
+            return;
+        }
+
+        grid.addRow(0, FormFields.columnHeading("Property"), FormFields.columnHeading("Type"),
+                FormFields.columnHeading("Format"));
+
+        int row = 1;
+        for (String name : names) {
             Schema property = schema.getProperty(name);
 
             ComboBox<String> typeBox = new ComboBox<>();
             typeBox.getItems().addAll(TYPES);
             typeBox.setValue(property.getType());
+            typeBox.setPrefWidth(TYPE_COLUMN_WIDTH);
             typeBox.valueProperty().addListener((obs, oldVal, newVal) -> property.setType(newVal));
 
             TextField formatField = new TextField(property.getFormat() == null ? "" : property.getFormat());
             formatField.setPromptText("format");
+            formatField.setMaxWidth(Double.MAX_VALUE);
             formatField.textProperty().addListener((obs, oldVal, newVal) -> property.setFormat(newVal));
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
             removeButton.setOnAction(e -> {
                 schema.removeProperty(name);
-                refreshProperties(schema, box);
+                refreshProperties(schema, grid);
             });
 
-            HBox propRow = new HBox(8,
-                    new Label(name), new Label("Type"), typeBox, new Label("Format"), formatField, removeButton);
-            propRow.setAlignment(Pos.CENTER_LEFT);
-            propRow.getStyleClass().add(Styles.BORDERED);
-            box.getChildren().add(propRow);
+            grid.addRow(row++, new Label(name), typeBox, formatField, removeButton);
         }
     }
+
 }

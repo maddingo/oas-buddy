@@ -30,7 +30,7 @@ An OpenAPI Specification (OAS) editor.
 ### Tech stack
 - Language/runtime: Java 25 (LTS)
 - Build tool: Maven
-- UI framework: JavaFX, themed with [AtlantaFX](https://github.com/mkpaz/atlantafx) (Primer Light/Dark, switchable via View menu) instead of the default JavaFX/Modena look. Shared pane-building helpers live in `no.maddin.oasbuddy.desktop.pane.FormFields` (`root()`, `grid()`, `heading()`) — every editor pane uses them for consistent spacing/typography rather than hand-rolling layout per pane.
+- UI framework: JavaFX, themed with [AtlantaFX](https://github.com/mkpaz/atlantafx) (Primer Light/Dark, switchable via View menu) instead of the default JavaFX/Modena look. Shared pane-building helpers live in `no.maddin.oasbuddy.desktop.pane.FormFields` (`root()`, `grid()`, `heading()`, `column()`, `columnHeading()`, `headerWithDelete()`) — every editor pane uses them for consistent spacing/typography rather than hand-rolling layout per pane.
 - Theme choice (light/dark) persists across runs via `java.util.prefs.Preferences` (`MainApp.PREFS`, key `"theme"`) — plain JDK API, no extra dependency. If more settings accumulate later (window size, recent files), reconsider in favor of a JSON settings file for structured data; `Preferences` was chosen for now because theme is the only persisted setting.
 - OAS document tree: Jackson (jackson-databind, jackson-dataformat-yaml)
 - OAS validation: swagger-parser v3 / swagger-core
@@ -53,6 +53,11 @@ An OpenAPI Specification (OAS) editor.
 - Opt-in only: profiles activate on `-Djpackage` (combined with an OS check), so a plain `mvn package` is unaffected. Run `mvn -Djpackage package` on the target OS — the matching profile is picked automatically. Output lands in `oas-buddy-desktop/target/dist/`.
 - Requires `dpkg-deb` (Linux/DEB), `rpmbuild` (Linux/RPM), Xcode command line tools (macOS/PKG), or WiX Toolset (Windows/EXE) to be installed locally — all preinstalled on GitHub's hosted runners except `rpmbuild` on Ubuntu, which the `package.yml` workflow installs explicitly.
 - `jpackage --app-version` rejects a `-SNAPSHOT` suffix, so the desktop module tracks a separate `jpackage.appVersion` property (default `0.1.0`) instead of reusing `project.version`/`revision` directly — a release build sets both to the same value explicitly (see Versioning above).
+
+### Removing things from the document
+- Every removal (schema, path, operation) goes through a confirmation: `no.maddin.oasbuddy.desktop.pane.RemovalConfirmation` is a one-method interface (`confirm(question, details)`) with a `dialog()` implementation for the running app, so the removal flows are testable without driving a modal `Alert`. `SchemaRemoval` and `PathRemoval` compose the `details` text and apply the change; the panes only *report* a removal request via a callback and never mutate the document themselves.
+- Removing a schema first scans the whole raw tree for `$ref`s to it (`core.model.SchemaReferences`) and lists them in the dialog; the refs are left dangling for the validation panel to report rather than being rewritten. Removing a path lists the operations that go with it. Nothing can `$ref` a path or an operation, so those need no scan.
+- After any removal `MainApp.refreshAndSelect(labels...)` rebuilds the outline and selects a surviving node by label, so the editor is never left showing something that was just deleted.
 
 ### Error handling principles
 - Malformed YAML/JSON on open: show error with line/column, never crash.

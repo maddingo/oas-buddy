@@ -7,14 +7,16 @@ import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.HttpMethod;
 import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.PathItem;
-import no.maddin.oasbuddy.core.model.Schema;
 import no.maddin.oasbuddy.core.validation.OasValidator;
 import no.maddin.oasbuddy.core.validation.ValidationMessage;
 import no.maddin.oasbuddy.desktop.pane.InfoPane;
 import no.maddin.oasbuddy.desktop.pane.OperationPane;
 import no.maddin.oasbuddy.desktop.pane.PathItemPane;
+import no.maddin.oasbuddy.desktop.pane.PathRemoval;
 import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
+import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
+import no.maddin.oasbuddy.desktop.pane.SchemaRemoval;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
 import no.maddin.oasbuddy.desktop.pane.ServersPane;
 import atlantafx.base.theme.PrimerDark;
@@ -61,6 +63,9 @@ public class MainApp extends Application {
     private static final String THEME_LIGHT = "light";
 
     private final OasValidator validator = new OasValidator();
+
+    /** Overridden by tests, which cannot answer a modal dialog. */
+    private RemovalConfirmation confirmation = RemovalConfirmation.dialog();
 
     private Stage stage;
     private OasDocument document;
@@ -226,7 +231,8 @@ public class MainApp extends Application {
         centerHolder.setCenter(new ScrollPane(pane));
     }
 
-    private void refreshOutline() {
+    /** Package-private so tests can rebuild the outline after seeding the document. */
+    void refreshOutline() {
         TreeItem<OutlineNode> root = new TreeItem<>(new OutlineNode(titleOrDefault(), null));
         root.setExpanded(true);
 
@@ -235,36 +241,71 @@ public class MainApp extends Application {
         root.getChildren().add(new TreeItem<>(
                 new OutlineNode("Servers", () -> ServersPane.build(document))));
 
-        TreeItem<OutlineNode> pathsItem = new TreeItem<>(
-                new OutlineNode("Paths", () -> PathsPane.build(document.getPaths(), this::refreshOutline)));
+        TreeItem<OutlineNode> pathsItem = new TreeItem<>(new OutlineNode(
+                "Paths", () -> PathsPane.build(document, this::refreshOutline, this::removePath)));
         pathsItem.setExpanded(true);
         for (String path : document.getPaths().pathNames()) {
             PathItem pathItem = document.getPaths().getPathItem(path);
-            TreeItem<OutlineNode> pathNode = new TreeItem<>(
-                    new OutlineNode(path, () -> PathItemPane.build(pathItem, this::refreshOutline)));
+            TreeItem<OutlineNode> pathNode = new TreeItem<>(new OutlineNode(path,
+                    () -> PathItemPane.build(document, path, this::refreshOutline,
+                            () -> removePath(path), method -> removeOperation(path, method))));
             for (var entry : pathItem.getOperations().entrySet()) {
                 HttpMethod method = entry.getKey();
                 Operation operation = entry.getValue();
                 Supplier<List<String>> schemaNames = () -> document.getComponents().getSchemas().names();
-                pathNode.getChildren().add(new TreeItem<>(
-                        new OutlineNode(method.name(), () -> OperationPane.build(operation, schemaNames))));
+                pathNode.getChildren().add(new TreeItem<>(new OutlineNode(method.name(),
+                        () -> OperationPane.build(operation, schemaNames,
+                                () -> removeOperation(path, method)))));
             }
             pathsItem.getChildren().add(pathNode);
         }
         root.getChildren().add(pathsItem);
 
         TreeItem<OutlineNode> schemasItem = new TreeItem<>(new OutlineNode(
-                "Schemas", () -> SchemasPane.build(document.getComponents().getSchemas(), this::refreshOutline)));
+                "Schemas", () -> SchemasPane.build(document, this::refreshOutline, this::removeSchema)));
         schemasItem.setExpanded(true);
         for (String name : document.getComponents().getSchemas().names()) {
-            Schema schema = document.getComponents().getSchemas().getSchema(name);
             schemasItem.getChildren().add(new TreeItem<>(
-                    new OutlineNode(name, () -> SchemaPane.build(schema))));
+                    new OutlineNode(name, () -> SchemaPane.build(document, name, this::removeSchema))));
         }
         root.getChildren().add(schemasItem);
 
         outlineView.setRoot(root);
         outlineView.setShowRoot(true);
+    }
+
+    private void removeSchema(String schemaName) {
+        SchemaRemoval.remove(document, schemaName, confirmation,
+                () -> refreshAndSelect("Schemas"));
+    }
+
+    private void removePath(String path) {
+        PathRemoval.removePath(document, path, confirmation,
+                () -> refreshAndSelect("Paths"));
+    }
+
+    private void removeOperation(String path, HttpMethod method) {
+        PathRemoval.removeOperation(document, path, method, confirmation,
+                () -> refreshAndSelect("Paths", path));
+    }
+
+    /**
+     * Rebuilds the outline after a removal and selects what is left, so the editor is never left
+     * showing something that no longer exists.
+     */
+    private void refreshAndSelect(String... labels) {
+        refreshOutline();
+        TreeItem<OutlineNode> item = outlineView.getRoot();
+        for (String label : labels) {
+            item = item.getChildren().stream()
+                    .filter(child -> label.equals(child.getValue().label()))
+                    .findFirst()
+                    .orElse(null);
+            if (item == null) {
+                return;
+            }
+        }
+        outlineView.getSelectionModel().select(item);
     }
 
     private String titleOrDefault() {
@@ -286,6 +327,10 @@ public class MainApp extends Application {
 
     OasDocument getDocument() {
         return document;
+    }
+
+    void setConfirmation(RemovalConfirmation confirmation) {
+        this.confirmation = confirmation;
     }
 
     private record OutlineNode(String label, Supplier<Node> paneSupplier) {

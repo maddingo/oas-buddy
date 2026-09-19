@@ -25,7 +25,11 @@ public final class OperationPane {
     private OperationPane() {
     }
 
-    public static Node build(Operation operation, Supplier<List<String>> schemaNames) {
+    /**
+     * @param onRemoveOperation asked to remove this operation; the pane only reports the request
+     */
+    public static Node build(Operation operation, Supplier<List<String>> schemaNames,
+                             Runnable onRemoveOperation) {
         GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
@@ -66,7 +70,8 @@ public final class OperationPane {
         });
 
         return FormFields.root(
-                FormFields.heading("Operation"), grid,
+                FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
+                        onRemoveOperation), grid,
                 FormFields.heading("Parameters"), parametersBox, addParameterButton,
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton));
