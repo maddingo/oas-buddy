@@ -119,6 +119,7 @@ public class MainApp extends Application {
         refreshOutline();
 
         stage.setTitle("OAS Buddy");
+        stage.getIcons().addAll(AppIcon.icons(16, 32, 48, 64, 128, 256));
         stage.setScene(new Scene(root, 1100, 750));
         stage.show();
     }

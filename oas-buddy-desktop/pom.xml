@@ -22,6 +22,10 @@
     <jpackage.appVersion>0.1.0</jpackage.appVersion>
     <jpackage.input>${project.build.directory}/jpackage-input</jpackage.input>
     <jpackage.destination>${project.build.directory}/dist</jpackage.destination>
+    <!-- jpackage wants a different icon format per OS, so each jpackage-* profile overrides this.
+         All three are generated from docs/branding/oas-buddy-icon.svg by tools/generate-icons.sh. -->
+    <jpackage.icon>${project.basedir}/src/main/icons/oas-buddy.png</jpackage.icon>
+    <jpackage.resourceDir>${project.basedir}/src/main/jpackage/linux</jpackage.resourceDir>
   </properties>
 
   <dependencies>
@@ -106,6 +110,10 @@
               <configuration>
                 <target>
                   <copy file="${project.build.directory}/${project.build.finalName}.jar" todir="${jpackage.input}"/>
+                  <!-- Rides along into the installed app dir so the Linux packages can install it
+                       into the hicolor theme as a genuinely scalable icon (see the postinst in
+                       src/main/jpackage/linux). Harmless on the other platforms. -->
+                  <copy file="${project.basedir}/src/main/icons/oas-buddy.svg" todir="${jpackage.input}"/>
                 </target>
               </configuration>
             </execution>
@@ -120,6 +128,7 @@
             <appVersion>${jpackage.appVersion}</appVersion>
             <vendor>OAS Buddy</vendor>
             <description>${project.description}</description>
+            <icon>${jpackage.icon}</icon>
             <input>${jpackage.input}</input>
             <mainJar>${project.build.finalName}.jar</mainJar>
             <mainClass>${javafx.mainClass}</mainClass>
@@ -154,6 +163,11 @@
           <plugin>
             <groupId>org.panteleyev</groupId>
             <artifactId>jpackage-maven-plugin</artifactId>
+            <configuration>
+              <!-- Supplies our "OAS Buddy.desktop", which points Icon= at the bundled SVG so the
+                   Linux packages get a scalable icon. Applies to DEB, RPM and APP_IMAGE alike. -->
+              <resourceDir>${jpackage.resourceDir}</resourceDir>
+            </configuration>
             <executions>
               <execution>
                 <id>jpackage-deb</id>
@@ -215,6 +229,9 @@
           <family>mac</family>
         </os>
       </activation>
+      <properties>
+        <jpackage.icon>${project.basedir}/src/main/icons/oas-buddy.icns</jpackage.icon>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -259,6 +276,9 @@
           <family>windows</family>
         </os>
       </activation>
+      <properties>
+        <jpackage.icon>${project.basedir}/src/main/icons/oas-buddy.ico</jpackage.icon>
+      </properties>
       <build>
         <plugins>
           <plugin>

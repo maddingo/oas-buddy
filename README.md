@@ -1,3 +1,5 @@
+<img src="docs/branding/oas-buddy-icon.svg" width="88" align="left" alt="">
+
 # OAS Buddy
 
 [![CI](https://github.com/maddingo/oas-buddy/actions/workflows/ci.yml/badge.svg)](https://github.com/maddingo/oas-buddy/actions/workflows/ci.yml)
@@ -5,6 +7,11 @@
 A desktop editor for OpenAPI Specification (OAS) documents.
 
 See [CLAUDE.md](CLAUDE.md) for the full project vision, MVP scope, and architecture decisions.
+
+## Branding
+
+The app icon and its palette live in [docs/branding/](docs/branding/). `oas-buddy-icon.svg` is the
+single hand-edited source; every other icon file is generated from it by `tools/generate-icons.sh`.
 
 ## Modules
 

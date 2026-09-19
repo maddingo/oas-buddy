@@ -1,0 +1,13 @@
+[Desktop Entry]
+# jpackage's own template, with Icon= pointed at the bundled SVG instead of the PNG it installs.
+# The freedesktop spec allows an absolute path here, so this gives Linux a genuinely scalable app
+# icon. An absolute path rather than a hicolor theme name keeps DEB and RPM identical without
+# vendoring jpackage's maintainer scripts; the /opt path follows <linuxPackageName> in pom.xml.
+Name=APPLICATION_NAME
+Comment=APPLICATION_DESCRIPTION
+Exec=APPLICATION_LAUNCHER
+Icon=/opt/oas-buddy/lib/app/oas-buddy.svg
+Terminal=false
+Type=Application
+Categories=DEPLOY_BUNDLE_CATEGORY
+DESKTOP_MIMES
