@@ -19,6 +19,9 @@ import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
 import no.maddin.oasbuddy.desktop.pane.SchemaRemoval;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
+import no.maddin.oasbuddy.desktop.pane.SecuritySchemePane;
+import no.maddin.oasbuddy.desktop.pane.SecuritySchemeRemoval;
+import no.maddin.oasbuddy.desktop.pane.SecuritySchemesPane;
 import no.maddin.oasbuddy.desktop.pane.ServersPane;
 import atlantafx.base.theme.PrimerDark;
 import atlantafx.base.theme.PrimerLight;
@@ -301,6 +304,16 @@ public class MainApp extends Application {
         }
         root.getChildren().add(schemasItem);
 
+        TreeItem<OutlineNode> securitySchemesItem = new TreeItem<>(new OutlineNode(
+                "Security Schemes",
+                () -> SecuritySchemesPane.build(document, this::refreshOutline, this::removeSecurityScheme)));
+        securitySchemesItem.setExpanded(true);
+        for (String name : document.getComponents().getSecuritySchemes().names()) {
+            securitySchemesItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
+                    () -> SecuritySchemePane.build(document, name, this::removeSecurityScheme))));
+        }
+        root.getChildren().add(securitySchemesItem);
+
         outlineView.setRoot(root);
         outlineView.setShowRoot(true);
     }
@@ -308,6 +321,11 @@ public class MainApp extends Application {
     private void removeSchema(String schemaName) {
         SchemaRemoval.remove(document, schemaName, confirmation,
                 () -> refreshAndSelect("Schemas"));
+    }
+
+    private void removeSecurityScheme(String schemeName) {
+        SecuritySchemeRemoval.remove(document, schemeName, confirmation,
+                () -> refreshAndSelect("Security Schemes"));
     }
 
     private void removePath(String path) {

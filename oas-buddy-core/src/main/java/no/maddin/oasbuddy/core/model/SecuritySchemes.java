@@ -8,11 +8,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public final class Schemas {
+/** The named map at {@code components.securitySchemes}. */
+public final class SecuritySchemes {
 
     private final LazyObjectNode node;
 
-    public Schemas(LazyObjectNode node) {
+    public SecuritySchemes(LazyObjectNode node) {
         this.node = node;
     }
 
@@ -29,18 +30,18 @@ public final class Schemas {
         return names;
     }
 
-    public Schema getSchema(String name) {
+    public SecurityScheme getScheme(String name) {
         ObjectNode existing = node.peek();
-        return existing != null && existing.get(name) instanceof ObjectNode schemaNode
-                ? new Schema(schemaNode)
+        return existing != null && existing.get(name) instanceof ObjectNode schemeNode
+                ? new SecurityScheme(schemeNode)
                 : null;
     }
 
-    public Schema addSchema(String name) {
-        return new Schema(JsonNodes.objectChild(node.create(), name));
+    public SecurityScheme addScheme(String name) {
+        return new SecurityScheme(JsonNodes.objectChild(node.create(), name));
     }
 
-    public void removeSchema(String name) {
+    public void removeScheme(String name) {
         ObjectNode existing = node.peek();
         if (existing != null) {
             existing.remove(name);

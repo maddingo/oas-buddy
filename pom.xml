@@ -61,7 +61,8 @@
     <jackson.version>2.19.0</jackson.version>
     <junit.version>5.12.2</junit.version>
     <swagger-parser.version>2.1.27</swagger-parser.version>
-    <javafx.version>24.0.1</javafx.version>
+    <slf4j.version>2.0.9</slf4j.version>
+    <javafx.version>25.0.4</javafx.version>
     <testfx.version>4.0.18</testfx.version>
   </properties>
 
@@ -78,6 +79,15 @@
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
         <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Keeps slf4j-api, which arrives transitively via swagger-parser, pinned to the same
+           version as the provider the desktop module installs. -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-bom</artifactId>
+        <version>${slf4j.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>

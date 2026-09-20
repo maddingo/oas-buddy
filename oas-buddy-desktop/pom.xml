@@ -46,6 +46,19 @@
       <version>2.1.0</version>
     </dependency>
 
+    <!-- The slf4j provider, chosen here because choosing one is the application's job: a library
+         that picks a provider forces it on every consumer, so oas-buddy-core deliberately ships
+         only the API that swagger-parser drags in. This routes slf4j into java.util.logging, where
+         the app's own System.getLogger calls already go, so library and application diagnostics
+         end up in one place rather than two parallel logging systems. Without it slf4j falls back
+         to a no-op logger and discards everything swagger-parser has to say about a document it
+         could not parse. -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk14</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
