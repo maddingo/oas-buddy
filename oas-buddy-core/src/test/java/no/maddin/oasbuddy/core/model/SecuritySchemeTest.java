@@ -78,9 +78,11 @@ class SecuritySchemeTest {
     }
 
     /**
-     * The strip list is the union of the three editable types' own fields and nothing else, so an
-     * oauth2 scheme's {@code flows} and any {@code x-} extension survive whatever happens around
-     * them. The editor must never quietly drop what it cannot edit.
+     * The strip list is the union of the editable types' own fields and nothing else, so anything
+     * the editor does not understand survives whatever happens around it — an {@code x-} extension,
+     * or a field belonging to a type this editor has no form for. It must never quietly drop what it
+     * cannot edit. ({@code flows} is no longer in that category: oauth2 is editable, so it is owned
+     * and is stripped when the type changes — see {@link #switchingAwayFromOauth2DropsItsFlows()}.)
      */
     @Test
     void switchingTypeLeavesFieldsItDoesNotUnderstandAlone() {
@@ -97,10 +99,7 @@ class SecuritySchemeTest {
                       name: X-API-Key
                       in: header
                       x-internal: true
-                      flows:
-                        implicit:
-                          authorizationUrl: https://example.com/auth
-                          scopes: {}
+                      x-audit-owner: platform-team
                 """, DocumentFormat.YAML);
         SecurityScheme scheme = document.getComponents().getSecuritySchemes().getScheme("Odd");
 
@@ -111,7 +110,7 @@ class SecuritySchemeTest {
                 () -> assertFalse(node.has("name"), "apiKey's name survived the switch"),
                 () -> assertFalse(node.has("in"), "apiKey's in survived the switch"),
                 () -> assertTrue(node.has("x-internal"), "an extension was dropped"),
-                () -> assertTrue(node.has("flows"), "oauth2 flows were dropped"));
+                () -> assertTrue(node.has("x-audit-owner"), "an extension was dropped"));
     }
 
     @Test
@@ -127,8 +126,48 @@ class SecuritySchemeTest {
     }
 
     @Test
-    void theEditableTypesAreTheThreeSimpleOnes() {
-        assertEquals(List.of("apiKey", "http", "openIdConnect"), SecurityScheme.EDITABLE_TYPES);
+    void theEditableTypesAreTheFourWithAForm() {
+        assertEquals(List.of("apiKey", "http", "oauth2", "openIdConnect"), SecurityScheme.EDITABLE_TYPES);
+    }
+
+    @Test
+    void switchingAwayFromOauth2DropsItsFlows() {
+        OasDocument document = DocumentReader.read("""
+                openapi: 3.0.3
+                info:
+                  title: Secured
+                  version: 1.0.0
+                paths: {}
+                components:
+                  securitySchemes:
+                    OAuth:
+                      type: oauth2
+                      flows:
+                        implicit:
+                          authorizationUrl: https://example.com/auth
+                          scopes: {}
+                """, DocumentFormat.YAML);
+        SecurityScheme scheme = document.getComponents().getSecuritySchemes().getScheme("OAuth");
+
+        scheme.setType("apiKey");
+
+        assertFalse(document.getRoot().get("components").get("securitySchemes").get("OAuth").has("flows"),
+                "flows belong to oauth2 and should go with it");
+    }
+
+    @Test
+    void switchingToOauth2DropsTheFlatTypesFields() {
+        SecurityScheme scheme = newScheme();
+        scheme.setType("apiKey");
+        scheme.setName("X-API-Key");
+        scheme.setIn("header");
+
+        scheme.setType("oauth2");
+
+        assertAll(
+                () -> assertNull(scheme.getName()),
+                () -> assertNull(scheme.getIn()),
+                () -> assertTrue(scheme.getFlows().isEmpty(), "switching type should not invent flows"));
     }
 
     private static SecurityScheme newScheme() {

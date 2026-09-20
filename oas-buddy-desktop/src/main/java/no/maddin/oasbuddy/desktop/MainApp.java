@@ -310,7 +310,8 @@ public class MainApp extends Application {
         securitySchemesItem.setExpanded(true);
         for (String name : document.getComponents().getSecuritySchemes().names()) {
             securitySchemesItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
-                    () -> SecuritySchemePane.build(document, name, this::removeSecurityScheme))));
+                    () -> SecuritySchemePane.build(document, name, confirmation,
+                            this::removeSecurityScheme))));
         }
         root.getChildren().add(securitySchemesItem);
 
