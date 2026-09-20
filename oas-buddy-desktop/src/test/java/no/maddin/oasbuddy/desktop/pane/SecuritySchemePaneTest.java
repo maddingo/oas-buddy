@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -28,6 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SecuritySchemePaneTest extends ApplicationTest {
 
     private final List<String> removalRequests = new ArrayList<>();
+    private final List<String> confirmations = new ArrayList<>();
+    private boolean confirm = true;
+
     private OasDocument document;
     private StackPane holder;
 
@@ -36,6 +40,8 @@ class SecuritySchemePaneTest extends ApplicationTest {
         document = OasDocument.newDocument(DocumentFormat.YAML);
         document.getComponents().getSecuritySchemes().addScheme("ApiKeyAuth").setType("apiKey");
         document.getComponents().getSecuritySchemes().addScheme("OAuth2Auth").setType("oauth2");
+        // A type this editor has no form for, and is therefore obliged to leave alone.
+        document.getComponents().getSecuritySchemes().addScheme("MutualTls").setType("mutualTLS");
 
         holder = new StackPane();
         stage.setScene(new Scene(holder, 900, 600));
@@ -44,7 +50,10 @@ class SecuritySchemePaneTest extends ApplicationTest {
     }
 
     private void show(String schemeName) {
-        Node pane = SecuritySchemePane.build(document, schemeName, removalRequests::add);
+        Node pane = SecuritySchemePane.build(document, schemeName, (question, details) -> {
+            confirmations.add(question);
+            return confirm;
+        }, removalRequests::add);
         interact(() -> holder.getChildren().setAll(pane));
     }
 
@@ -92,8 +101,8 @@ class SecuritySchemePaneTest extends ApplicationTest {
     }
 
     @Test
-    void anOauth2SchemeSaysItCannotBeEditedYetAndOffersNoTypePicker() {
-        show("OAuth2Auth");
+    void aSchemeOfATypeWithNoFormSaysSoAndOffersNoTypePicker() {
+        show("MutualTls");
 
         assertAll(
                 () -> assertTrue(lookup("#security-scheme-readonly").tryQuery().isPresent(),
@@ -105,12 +114,63 @@ class SecuritySchemePaneTest extends ApplicationTest {
     }
 
     @Test
-    void anOauth2SchemeCanStillBeDeleted() {
-        show("OAuth2Auth");
+    void aSchemeOfATypeWithNoFormCanStillBeDeleted() {
+        show("MutualTls");
 
         interact(() -> lookup("#delete-security-scheme").queryButton().fire());
 
-        assertEquals(List.of("OAuth2Auth"), removalRequests);
+        assertEquals(List.of("MutualTls"), removalRequests);
+    }
+
+    @Test
+    void anOauth2SchemeShowsTheFlowsSection() {
+        show("OAuth2Auth");
+
+        assertTrue(lookup("#oauth-flows").tryQuery().isPresent(), "no flows section for an oauth2 scheme");
+    }
+
+    @Test
+    void switchingAwayFromAPopulatedOauth2SchemeAsksFirst() {
+        givenAPopulatedOauth2Scheme();
+
+        interact(() -> typeBox().setValue("apiKey"));
+
+        assertAll(
+                () -> assertEquals(List.of("Change \"OAuth2Auth\" from oauth2 to apiKey?"), confirmations),
+                () -> assertEquals("apiKey", scheme("OAuth2Auth").getType()),
+                () -> assertTrue(scheme("OAuth2Auth").getFlows().isEmpty()));
+    }
+
+    @Test
+    void decliningThatChangeLeavesTheSchemeAndThePickerAlone() {
+        givenAPopulatedOauth2Scheme();
+        confirm = false;
+
+        interact(() -> typeBox().setValue("apiKey"));
+
+        assertAll(
+                () -> assertEquals("oauth2", scheme("OAuth2Auth").getType()),
+                () -> assertFalse(scheme("OAuth2Auth").getFlows().isEmpty()),
+                () -> assertEquals("oauth2", typeBox().getValue(),
+                        "the picker must not contradict the document"));
+    }
+
+    @Test
+    void switchingAwayFromAnEmptyOauth2SchemeAsksNothing() {
+        show("OAuth2Auth");
+
+        interact(() -> typeBox().setValue("apiKey"));
+
+        assertAll(
+                () -> assertEquals(List.of(), confirmations, "nothing was at stake, so nothing to ask"),
+                () -> assertEquals("apiKey", scheme("OAuth2Auth").getType()));
+    }
+
+    private void givenAPopulatedOauth2Scheme() {
+        scheme("OAuth2Auth").getFlows().addFlow("implicit")
+                .setUrl(no.maddin.oasbuddy.core.model.OAuthFlowUrl.AUTHORIZATION_URL,
+                        "https://example.com/auth");
+        show("OAuth2Auth");
     }
 
     @Test

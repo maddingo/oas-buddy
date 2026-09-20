@@ -64,6 +64,27 @@ class DocumentRoundTripTest {
                 fieldNames(schemes(reloaded)));
     }
 
+    /**
+     * Editing an oauth2 flow must append rather than reshuffle: a new URL or scope goes after what
+     * is already there, so the diff of a saved file shows only what the user actually changed.
+     */
+    @Test
+    void editingAnOauthFlowAppendsWithoutReorderingTheFile() throws IOException {
+        OasDocument original = loadFixture("secured.yaml", DocumentFormat.YAML);
+        var flow = original.getComponents().getSecuritySchemes().getScheme("OAuth2Auth")
+                .getFlows().getFlow("authorizationCode");
+
+        flow.setUrl(no.maddin.oasbuddy.core.model.OAuthFlowUrl.REFRESH_URL, "https://example.com/refresh");
+        flow.setScope("write:pets", "modify your pets");
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), DocumentFormat.YAML);
+        JsonNode reloadedFlow = schemes(reloaded).get("OAuth2Auth").get("flows").get("authorizationCode");
+
+        assertEquals(List.of("authorizationUrl", "tokenUrl", "scopes", "refreshUrl"),
+                fieldNames(reloadedFlow));
+        assertEquals(List.of("read:pets", "write:pets"), fieldNames(reloadedFlow.get("scopes")));
+    }
+
     private static void assertRoundTrips(String fixture, DocumentFormat format) throws IOException {
         OasDocument original = loadFixture(fixture, format);
         OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);

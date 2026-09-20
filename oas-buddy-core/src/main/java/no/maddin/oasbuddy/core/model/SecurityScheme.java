@@ -2,6 +2,7 @@ package no.maddin.oasbuddy.core.model;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.document.JsonNodes;
+import no.maddin.oasbuddy.core.document.LazyObjectNode;
 
 import java.util.List;
 import java.util.Map;
@@ -9,15 +10,15 @@ import java.util.Map;
 /**
  * One entry of {@code components.securitySchemes}.
  *
- * <p>OAS 3.0 defines five types, of which this covers the three whose shape is a handful of flat
- * strings: {@code apiKey}, {@code http} and {@code openIdConnect}. {@code oauth2} nests a
- * {@code flows} object and is deliberately not editable yet; a loaded oauth2 scheme is still
- * readable here and, more importantly, is left exactly as it was found.
+ * <p>OAS 3.0 defines five types, of which this covers four: the three whose shape is a handful of
+ * flat strings ({@code apiKey}, {@code http}, {@code openIdConnect}) and {@code oauth2}, whose
+ * nested {@code flows} object is reached through {@link #getFlows()}. A scheme of any other type —
+ * {@code mutualTLS}, or a typo — stays readable here and is left exactly as it was found.
  */
 public final class SecurityScheme {
 
     /** The types this editor has a form for, in the order the type picker offers them. */
-    public static final List<String> EDITABLE_TYPES = List.of("apiKey", "http", "openIdConnect");
+    public static final List<String> EDITABLE_TYPES = List.of("apiKey", "http", "oauth2", "openIdConnect");
 
     /** Where an {@code apiKey} scheme carries its key, per OAS 3.0. */
     public static final List<String> API_KEY_LOCATIONS = List.of("query", "header", "cookie");
@@ -30,6 +31,7 @@ public final class SecurityScheme {
     private static final Map<String, List<String>> FIELDS_BY_TYPE = Map.of(
             "apiKey", List.of("name", "in"),
             "http", List.of("scheme", "bearerFormat"),
+            "oauth2", List.of("flows"),
             "openIdConnect", List.of("openIdConnectUrl"));
 
     private final ObjectNode node;
@@ -61,6 +63,14 @@ public final class SecurityScheme {
     /** Whether this editor has a form for this scheme's type. */
     public boolean isEditable() {
         return EDITABLE_TYPES.contains(getType());
+    }
+
+    /**
+     * The oauth2 flows, resolved lazily: the {@code flows} object is added only once a flow is
+     * actually declared, so reading an oauth2 scheme never changes it.
+     */
+    public OAuthFlows getFlows() {
+        return new OAuthFlows(LazyObjectNode.of(node, "flows"));
     }
 
     public String getDescription() {
