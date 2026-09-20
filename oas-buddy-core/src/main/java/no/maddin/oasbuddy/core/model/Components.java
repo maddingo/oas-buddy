@@ -1,17 +1,20 @@
 package no.maddin.oasbuddy.core.model;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import no.maddin.oasbuddy.core.document.JsonNodes;
+import no.maddin.oasbuddy.core.document.LazyObjectNode;
 
 public final class Components {
 
-    private final ObjectNode node;
+    private final LazyObjectNode node;
 
-    public Components(ObjectNode node) {
+    public Components(LazyObjectNode node) {
         this.node = node;
     }
 
     public Schemas getSchemas() {
-        return new Schemas(JsonNodes.objectChild(node, "schemas"));
+        return new Schemas(node.child("schemas"));
+    }
+
+    public SecuritySchemes getSecuritySchemes() {
+        return new SecuritySchemes(node.child("securitySchemes"));
     }
 }

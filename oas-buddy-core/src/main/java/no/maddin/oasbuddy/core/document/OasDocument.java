@@ -86,7 +86,11 @@ public final class OasDocument {
         return new Paths(JsonNodes.objectChild(root, "paths"));
     }
 
+    /**
+     * The components section, resolved lazily: it is added to the document only if something is
+     * actually written to it. See {@link LazyObjectNode}.
+     */
     public Components getComponents() {
-        return new Components(JsonNodes.objectChild(root, "components"));
+        return new Components(LazyObjectNode.of(root, "components"));
     }
 }

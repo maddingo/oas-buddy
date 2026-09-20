@@ -30,6 +30,8 @@ class MainAppRemovalTest extends ApplicationTest {
         app.getDocument().getPaths().addPath("/pets").addOperation(HttpMethod.GET).setOperationId("listPets");
         app.getDocument().getPaths().getPathItem("/pets").addOperation(HttpMethod.POST);
         app.getDocument().getComponents().getSchemas().addSchema("Pet").setType("object");
+        app.getDocument().getComponents().getSecuritySchemes().addScheme("ApiKeyAuth").setType("apiKey");
+        app.getDocument().getComponents().getSecuritySchemes().addScheme("OAuth2Auth").setType("oauth2");
         interact(() -> {
             app.refreshOutline();
         });
@@ -64,6 +66,34 @@ class MainAppRemovalTest extends ApplicationTest {
 
         assertFalse(app.getDocument().getComponents().getSchemas().names().contains("Pet"));
         assertTrue(lookup("#schemas-list").tryQuery().isPresent(), "should land on the schema list");
+    }
+
+    @Test
+    void theOutlineListsEverySecurityScheme() {
+        assertEquals(List.of("ApiKeyAuth", "OAuth2Auth"), outlineChildren("Security Schemes"));
+    }
+
+    @Test
+    void removingASecuritySchemeLeavesTheEditorOnTheSchemeList() {
+        selectOutline("Security Schemes", "ApiKeyAuth");
+
+        interact(() -> deleteButton("#delete-security-scheme").fire());
+
+        assertFalse(app.getDocument().getComponents().getSecuritySchemes().names().contains("ApiKeyAuth"));
+        assertTrue(lookup("#security-schemes-list").tryQuery().isPresent(),
+                "should land on the security scheme list");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> outlineChildren(String label) {
+        TreeView<Object> outline = lookup(".tree-view").query();
+        return outline.getRoot().getChildren().stream()
+                .filter(child -> label.equals(String.valueOf(child.getValue())))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no outline node " + label))
+                .getChildren().stream()
+                .map(child -> String.valueOf(child.getValue()))
+                .toList();
     }
 
     private Button deleteButton(String id) {

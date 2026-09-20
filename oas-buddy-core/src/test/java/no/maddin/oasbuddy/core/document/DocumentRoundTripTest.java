@@ -36,6 +36,52 @@ class DocumentRoundTripTest {
         assertEquals(original.getRoot(), reloaded.getRoot());
     }
 
+    @Test
+    void securitySchemesRoundTripInYaml() throws IOException {
+        assertRoundTrips("secured.yaml", DocumentFormat.YAML);
+    }
+
+    @Test
+    void securitySchemesRoundTripInJson() throws IOException {
+        assertRoundTrips("secured.json", DocumentFormat.JSON);
+    }
+
+    /**
+     * Regression guard rather than a driver: the editor cannot edit an oauth2 scheme, so the one
+     * thing it owes such a scheme is to leave it exactly as loaded even while the schemes around it
+     * are edited. Nothing in the facade touches it today; this fails the day something does.
+     */
+    @Test
+    void editingOneSchemeLeavesAnOauth2SchemeExactlyAsLoaded() throws IOException {
+        OasDocument original = loadFixture("secured.yaml", DocumentFormat.YAML);
+        JsonNode oauth2AsLoaded = schemes(original).get("OAuth2Auth").deepCopy();
+
+        original.getComponents().getSecuritySchemes().getScheme("ApiKeyAuth").setType("http");
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), DocumentFormat.YAML);
+
+        assertEquals(oauth2AsLoaded, schemes(reloaded).get("OAuth2Auth"));
+        assertEquals(List.of("ApiKeyAuth", "BearerAuth", "OidcAuth", "OAuth2Auth"),
+                fieldNames(schemes(reloaded)));
+    }
+
+    private static void assertRoundTrips(String fixture, DocumentFormat format) throws IOException {
+        OasDocument original = loadFixture(fixture, format);
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+    }
+
+    private static JsonNode schemes(OasDocument document) {
+        return document.getRoot().get("components").get("securitySchemes");
+    }
+
+    private static List<String> fieldNames(JsonNode node) {
+        List<String> names = new ArrayList<>();
+        node.fieldNames().forEachRemaining(names::add);
+        return names;
+    }
+
     private static OasDocument loadFixture(String name, DocumentFormat format) throws IOException {
         try (InputStream is = DocumentRoundTripTest.class.getResourceAsStream("/fixtures/" + name)) {
             if (is == null) {
