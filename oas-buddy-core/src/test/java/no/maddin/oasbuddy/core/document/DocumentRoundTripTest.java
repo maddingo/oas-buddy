@@ -85,6 +85,38 @@ class DocumentRoundTripTest {
         assertEquals(List.of("read:pets", "write:pets"), fieldNames(reloadedFlow.get("scopes")));
     }
 
+    @Test
+    void editedSecurityRoundTripsInYaml() throws IOException {
+        assertEditedSecurityRoundTrips("secured.yaml", DocumentFormat.YAML);
+    }
+
+    @Test
+    void editedSecurityRoundTripsInJson() throws IOException {
+        assertEditedSecurityRoundTrips("secured.json", DocumentFormat.JSON);
+    }
+
+    /**
+     * Changing what an API requires must survive a save, including the distinction between an
+     * operation that is explicitly public (an empty array) and one that inherits (no key at all).
+     */
+    private static void assertEditedSecurityRoundTrips(String fixture, DocumentFormat format)
+            throws IOException {
+        OasDocument original = loadFixture(fixture, format);
+        original.getSecurity().add("OAuth2Auth").setScopes("OAuth2Auth", List.of("read:pets"));
+        original.getPaths().getPathItem("/pets")
+                .getOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET)
+                .getSecurity().declarePublic();
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertEquals(List.of("read:pets"),
+                reloaded.getSecurity().requirements().get(1).getScopes("OAuth2Auth"));
+        assertEquals(0, reloaded.getRoot().get("paths").get("/pets").get("get").get("security").size(),
+                "an explicitly public operation must stay an empty array, not vanish");
+    }
+
     private static void assertRoundTrips(String fixture, DocumentFormat format) throws IOException {
         OasDocument original = loadFixture(fixture, format);
         OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);

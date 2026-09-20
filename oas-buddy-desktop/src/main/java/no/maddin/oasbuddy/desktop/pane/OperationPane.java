@@ -5,6 +5,7 @@ import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.Parameter;
 import no.maddin.oasbuddy.core.model.RequestBody;
 import no.maddin.oasbuddy.core.model.Responses;
+import no.maddin.oasbuddy.core.model.SecurityRequirements;
 import atlantafx.base.theme.Styles;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -12,6 +13,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -26,10 +29,11 @@ public final class OperationPane {
     }
 
     /**
+     * @param catalog           the schemes a security override may point at
      * @param onRemoveOperation asked to remove this operation; the pane only reports the request
      */
     public static Node build(Operation operation, Supplier<List<String>> schemaNames,
-                             Runnable onRemoveOperation) {
+                             SecuritySchemeCatalog catalog, Runnable onRemoveOperation) {
         GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
@@ -69,12 +73,75 @@ public final class OperationPane {
             }
         });
 
+        VBox securityBox = new VBox(8);
+        buildSecurity(operation, securityBox, catalog);
+
         return FormFields.root(
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
                 FormFields.heading("Parameters"), parametersBox, addParameterButton,
                 FormFields.heading("Request body"), requestBodyBox,
-                FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton));
+                FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
+                FormFields.heading("Security"), securityBox);
+    }
+
+    /**
+     * The three states the spec distinguishes: no {@code security} key (inherit the document
+     * default), an empty array (explicitly public) and a non-empty array (override).
+     *
+     * <p>Which radio is selected is read from the document on build, but held as the pane's own
+     * state afterwards: choosing "Require" declares an empty array, which on its own still reads
+     * back as "public", and the radio must not jump away while the user is about to add the first
+     * requirement.
+     */
+    private static void buildSecurity(Operation operation, VBox box, SecuritySchemeCatalog catalog) {
+        SecurityRequirements security = operation.getSecurity();
+        String mode = !security.isDeclared() ? "inherit"
+                : security.requirements().isEmpty() ? "public" : "require";
+        buildSecurity(operation, box, catalog, mode);
+    }
+
+    private static void buildSecurity(Operation operation, VBox box, SecuritySchemeCatalog catalog,
+                                      String mode) {
+        box.getChildren().clear();
+        SecurityRequirements security = operation.getSecurity();
+
+        ToggleGroup group = new ToggleGroup();
+        HBox choices = new HBox(12,
+                modeRadio(group, "inherit", "Inherit document default", mode,
+                        () -> security.undeclare(), operation, box, catalog),
+                modeRadio(group, "public", "Public (no security)", mode,
+                        security::declarePublic, operation, box, catalog),
+                modeRadio(group, "require", "Require", mode,
+                        () -> { }, operation, box, catalog));
+        choices.setAlignment(Pos.CENTER_LEFT);
+        box.getChildren().add(choices);
+
+        if ("require".equals(mode)) {
+            // "Require" with nothing listed is an empty array, which is what public looks like; the
+            // array is declared here so adding the first requirement has somewhere to go.
+            if (!security.isDeclared()) {
+                security.declarePublic();
+            }
+            box.getChildren().add(SecurityRequirementsPane.build(security, catalog,
+                    () -> buildSecurity(operation, box, catalog, "require")));
+        }
+    }
+
+    private static RadioButton modeRadio(ToggleGroup group, String mode, String label, String current,
+                                         Runnable apply, Operation operation, VBox box,
+                                         SecuritySchemeCatalog catalog) {
+        RadioButton radio = new RadioButton(label);
+        radio.setId("operation-security-" + mode);
+        radio.setToggleGroup(group);
+        radio.setSelected(mode.equals(current));
+        radio.selectedProperty().addListener((obs, was, now) -> {
+            if (now) {
+                apply.run();
+                buildSecurity(operation, box, catalog, mode);
+            }
+        });
+        return radio;
     }
 
     private static void refreshParameters(Operation operation, VBox box) {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.model.Components;
 import no.maddin.oasbuddy.core.model.Info;
 import no.maddin.oasbuddy.core.model.Paths;
+import no.maddin.oasbuddy.core.model.SecurityRequirements;
 import no.maddin.oasbuddy.core.model.Server;
 
 import java.util.ArrayList;
@@ -80,6 +81,11 @@ public final class OasDocument {
 
     public void removeServer(int index) {
         JsonNodes.arrayChild(root, "servers").remove(index);
+    }
+
+    /** The document-wide default security, which operations inherit unless they override it. */
+    public SecurityRequirements getSecurity() {
+        return new SecurityRequirements(root);
     }
 
     public Paths getPaths() {

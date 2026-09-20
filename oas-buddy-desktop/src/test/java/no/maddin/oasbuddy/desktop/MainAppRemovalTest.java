@@ -74,6 +74,15 @@ class MainAppRemovalTest extends ApplicationTest {
     }
 
     @Test
+    void theOutlineOffersTheDocumentSecuritySection() {
+        TreeView<Object> outline = lookup(".tree-view").query();
+
+        assertTrue(outline.getRoot().getChildren().stream()
+                        .anyMatch(child -> "Security".equals(String.valueOf(child.getValue()))),
+                "no document security node in the outline");
+    }
+
+    @Test
     void removingASecuritySchemeLeavesTheEditorOnTheSchemeList() {
         selectOutline("Security Schemes", "ApiKeyAuth");
 

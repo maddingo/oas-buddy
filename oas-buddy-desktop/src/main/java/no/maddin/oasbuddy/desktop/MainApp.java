@@ -19,6 +19,8 @@ import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
 import no.maddin.oasbuddy.desktop.pane.SchemaRemoval;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
+import no.maddin.oasbuddy.desktop.pane.SecurityPane;
+import no.maddin.oasbuddy.desktop.pane.SecuritySchemeCatalog;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemePane;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemeRemoval;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemesPane;
@@ -289,6 +291,7 @@ public class MainApp extends Application {
                 Supplier<List<String>> schemaNames = () -> document.getComponents().getSchemas().names();
                 pathNode.getChildren().add(new TreeItem<>(new OutlineNode(method.name(),
                         () -> OperationPane.build(operation, schemaNames,
+                                SecuritySchemeCatalog.of(document),
                                 () -> removeOperation(path, method)))));
             }
             pathsItem.getChildren().add(pathNode);
@@ -314,6 +317,9 @@ public class MainApp extends Application {
                             this::removeSecurityScheme))));
         }
         root.getChildren().add(securitySchemesItem);
+
+        root.getChildren().add(new TreeItem<>(new OutlineNode(
+                "Security", () -> SecurityPane.build(document, this::refreshOutline))));
 
         outlineView.setRoot(root);
         outlineView.setShowRoot(true);
