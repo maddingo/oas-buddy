@@ -89,6 +89,14 @@ An OpenAPI Specification (OAS) editor.
 - Removing a schema first scans the whole raw tree for `$ref`s to it (`core.model.SchemaReferences`) and lists them in the dialog; the refs are left dangling for the validation panel to report rather than being rewritten. Removing a path lists the operations that go with it. Nothing can `$ref` a path or an operation, so those need no scan.
 - After any removal `MainApp.refreshAndSelect(labels...)` rebuilds the outline and selects a surviving node by label, so the editor is never left showing something that was just deleted.
 
+### Logging
+- The app's own logging uses `System.getLogger` (the JDK platform logger), which lands in `java.util.logging`. No logging dependency for our own code.
+- swagger-parser logs through **slf4j**, whose API arrives transitively via `oas-buddy-core`. The **provider is declared in `oas-buddy-desktop`, not in core**: picking one is the application's job, and a library that picks a provider forces it on every consumer. `oas-buddy-core` therefore ships the API only, and its own test runs still print slf4j's "No providers were found" banner — that is correct for a library, not a bug to chase.
+- The provider is `org.slf4j:slf4j-jdk14` (scope `runtime`), which routes slf4j **into** `java.util.logging`, so library and application diagnostics end up in one place. Without it slf4j falls back to a no-op logger and silently discards everything swagger-parser has to say about a document it could not parse — the banner on stderr is the cosmetic half of that problem, the lost diagnostics are the real half.
+- **Don't confuse it with `org.slf4j:slf4j-jdk-platform-logging`**, which is a `System.LoggerFinder` routing the *other* direction (`System.Logger` → slf4j). It is not an slf4j provider, would not silence the banner, and combined with a NOP fallback would send our own logging nowhere.
+- `slf4j-bom` is imported in the root POM's `dependencyManagement` so the API version swagger-parser drags in cannot drift from the provider's.
+- `LoggingProviderTest` asserts a provider is present *and* that both an slf4j call and a `System.getLogger` call arrive in `java.util.logging`, so the routing is checked rather than just the dependency.
+
 ### Error handling principles
 - Malformed YAML/JSON on open: show error with line/column, never crash.
 - Spec validation errors/warnings: shown in a non-blocking panel; editing and saving an invalid/WIP spec is always allowed.
