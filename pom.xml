@@ -51,7 +51,7 @@
 
     <!-- CI-friendly version: overridden with -Drevision=X.Y.Z when building a release; the
          default here is what every ordinary local/CI build (test, package) uses. -->
-    <revision>1.0.0-SNAPSHOT</revision>
+    <revision>1.2.0-SNAPSHOT</revision>
 
     <maven.compiler.source>25</maven.compiler.source>
     <maven.compiler.release>25</maven.compiler.release>
