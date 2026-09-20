@@ -60,10 +60,36 @@
   </dependencies>
 
   <build>
+    <!-- Filtering is scoped to version.properties alone: the module also ships the branding SVG,
+         and running hand-authored or binary assets through the filter is a good way to corrupt
+         them. Declaring <resources> replaces the default, hence the unfiltered entry as well. -->
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>no/maddin/oasbuddy/desktop/version.properties</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>no/maddin/oasbuddy/desktop/version.properties</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <!-- So AppInfoTest can check that version.properties really was filtered, instead of
+                 only checking that it holds something. -->
+            <project.version>${project.version}</project.version>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.openjfx</groupId>

@@ -11,7 +11,14 @@
 
   <name>OAS Buddy</name>
   <description>An OpenAPI Specification editor.</description>
-  <url>https://github.com/maddingo/oas-buddy</url>
+  <url>${repository.url}</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <!-- Together with inceptionYear this is where the About dialog's copyright line comes from. -->
+  <organization>
+    <name>OAS Buddy contributors</name>
+    <url>${repository.url}</url>
+  </organization>
 
   <licenses>
     <license>
@@ -20,12 +27,28 @@
     </license>
   </licenses>
 
+  <!-- Credited by name in the About dialog, which also links to the full contributor graph. -->
+  <developers>
+    <developer>
+      <id>maddingo</id>
+      <name>Martin Goldhahn</name>
+      <url>https://github.com/maddingo</url>
+    </developer>
+  </developers>
+
   <modules>
     <module>oas-buddy-core</module>
     <module>oas-buddy-desktop</module>
   </modules>
 
   <properties>
+    <!-- The repository, as a property rather than read back from ${project.url}: Maven appends the
+         module's artifactId to an inherited url, so ${project.url} in a child module points at a
+         path that does not exist. The desktop module filters this into version.properties to build
+         the About dialog's links. Verified with Maven 3.9.16, where the documented
+         child.project.url.inherit.append.path="false" attribute does not suppress the append. -->
+    <repository.url>https://github.com/maddingo/oas-buddy</repository.url>
+
     <!-- CI-friendly version: overridden with -Drevision=X.Y.Z when building a release; the
          default here is what every ordinary local/CI build (test, package) uses. -->
     <revision>1.0.0-SNAPSHOT</revision>
