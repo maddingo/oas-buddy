@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.document.JsonNodes;
 import no.maddin.oasbuddy.core.document.LazyObjectNode;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +72,29 @@ public final class SecurityScheme {
      */
     public OAuthFlows getFlows() {
         return new OAuthFlows(LazyObjectNode.of(node, "flows"));
+    }
+
+    /**
+     * The scopes a requirement on this scheme may ask for: the union of its flows' scopes, in
+     * document order, or empty for a type that has none.
+     *
+     * <p>The union rather than one flow's scopes, because a requirement names the scheme and not a
+     * flow, so a scope any flow defines is legitimate to require.
+     */
+    public List<String> declaredScopes() {
+        if (!"oauth2".equals(getType())) {
+            return List.of();
+        }
+        OAuthFlows flows = getFlows();
+        List<String> scopes = new ArrayList<>();
+        for (String flowName : flows.names()) {
+            for (String scope : flows.getFlow(flowName).scopeNames()) {
+                if (!scopes.contains(scope)) {
+                    scopes.add(scope);
+                }
+            }
+        }
+        return List.copyOf(scopes);
     }
 
     public String getDescription() {

@@ -170,6 +170,32 @@ class SecuritySchemeTest {
                 () -> assertTrue(scheme.getFlows().isEmpty(), "switching type should not invent flows"));
     }
 
+    /**
+     * What a requirement on this scheme may ask for. The union across flows, because a requirement
+     * names the scheme, not one of its flows, and a scope defined by any flow is legitimate.
+     */
+    @Test
+    void anOauth2SchemeOffersTheScopesItsFlowsDeclare() {
+        SecurityScheme scheme = newScheme();
+        scheme.setType("oauth2");
+        OAuthFlow implicit = scheme.getFlows().addFlow("implicit");
+        implicit.setScope("read:pets", "read your pets");
+        implicit.setScope("write:pets", "modify your pets");
+        OAuthFlow password = scheme.getFlows().addFlow("password");
+        password.setScope("write:pets", "modify your pets");
+        password.setScope("admin", "everything");
+
+        assertEquals(List.of("read:pets", "write:pets", "admin"), scheme.declaredScopes());
+    }
+
+    @Test
+    void aSchemeThatIsNotOauth2DeclaresNoScopes() {
+        SecurityScheme scheme = newScheme();
+        scheme.setType("apiKey");
+
+        assertEquals(List.of(), scheme.declaredScopes());
+    }
+
     private static SecurityScheme newScheme() {
         return OasDocument.newDocument(DocumentFormat.YAML)
                 .getComponents().getSecuritySchemes().addScheme("Auth");

@@ -15,6 +15,14 @@ public final class Operation {
         this.node = node;
     }
 
+    /**
+     * This operation's security override. Absent means it inherits the document default; see
+     * {@link SecurityRequirements}.
+     */
+    public SecurityRequirements getSecurity() {
+        return new SecurityRequirements(node);
+    }
+
     public String getOperationId() {
         return JsonNodes.text(node, "operationId");
     }
