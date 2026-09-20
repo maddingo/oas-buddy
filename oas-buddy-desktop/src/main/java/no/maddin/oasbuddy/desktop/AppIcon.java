@@ -78,6 +78,22 @@ public final class AppIcon {
     }
 
     /**
+     * The icon as live vector, sized to the given edge length in pixels.
+     *
+     * <p>For use inside the scene graph — an About dialog, a toolbar — where none of the rasterising
+     * {@link #image(int)} does is needed, and where staying vector means the icon is resolved by the
+     * same renderer that draws the rest of the window.
+     */
+    public static Group vector(double edgeLength) {
+        Group scaled = vector();
+        double scale = edgeLength / CANVAS;
+        scaled.getTransforms().add(new Scale(scale, scale));
+        // Wrapped, because a node's own transforms do not count towards its layout bounds: without
+        // the wrapper this would still measure 256 to a layout parent and blow the dialog open.
+        return new Group(scaled);
+    }
+
+    /**
      * Renders the icon at the given edge length in pixels.
      *
      * <p>Must be called on the JavaFX application thread.

@@ -9,6 +9,7 @@ import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.PathItem;
 import no.maddin.oasbuddy.core.validation.OasValidator;
 import no.maddin.oasbuddy.core.validation.ValidationMessage;
+import no.maddin.oasbuddy.desktop.pane.AboutDialog;
 import no.maddin.oasbuddy.desktop.pane.InfoPane;
 import no.maddin.oasbuddy.desktop.pane.OperationPane;
 import no.maddin.oasbuddy.desktop.pane.PathItemPane;
@@ -66,6 +67,9 @@ public class MainApp extends Application {
 
     /** Overridden by tests, which cannot answer a modal dialog. */
     private RemovalConfirmation confirmation = RemovalConfirmation.dialog();
+
+    /** Overridden by tests, which cannot dismiss a modal dialog. */
+    private Runnable aboutAction = this::showAbout;
 
     private Stage stage;
     private OasDocument document;
@@ -158,7 +162,33 @@ public class MainApp extends Application {
 
         Menu viewMenu = new Menu("View", null, lightThemeItem, darkThemeItem);
 
-        return new MenuBar(fileMenu, viewMenu);
+        MenuItem about = new MenuItem("About OAS Buddy");
+        about.setOnAction(e -> aboutAction.run());
+
+        Menu helpMenu = new Menu("Help", null, about);
+
+        return new MenuBar(fileMenu, viewMenu, helpMenu);
+    }
+
+    private void showAbout() {
+        AboutDialog.show(stage, AppInfo.load(), this::browse);
+    }
+
+    /**
+     * Hands a url to the desktop's own browser.
+     *
+     * <p>Package-private so the tests can exercise the case that actually happens: {@code
+     * HostServices} only exists in an application JavaFX launched itself, and a desktop with no
+     * registered handler fails at {@code showDocument}. A dead About link is not worth a stack
+     * trace in the user's face, so either way this logs and returns.
+     */
+    void browse(String url) {
+        try {
+            getHostServices().showDocument(url);
+        } catch (RuntimeException e) {
+            System.getLogger(MainApp.class.getName())
+                    .log(System.Logger.Level.WARNING, "could not open " + url + " in a browser", e);
+        }
     }
 
     private void setTheme(boolean dark) {
@@ -332,6 +362,10 @@ public class MainApp extends Application {
 
     void setConfirmation(RemovalConfirmation confirmation) {
         this.confirmation = confirmation;
+    }
+
+    void setAboutAction(Runnable aboutAction) {
+        this.aboutAction = aboutAction;
     }
 
     private record OutlineNode(String label, Supplier<Node> paneSupplier) {

@@ -1,5 +1,6 @@
 package no.maddin.oasbuddy.desktop;
 
+import javafx.scene.Group;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
 import javafx.scene.paint.Color;
@@ -7,6 +8,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.ApplicationTest;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,6 +39,20 @@ class AppIconRenderTest extends ApplicationTest {
             assertEquals(size, (int) image.getWidth(), "width at " + size);
             assertEquals(size, (int) image.getHeight(), "height at " + size);
         }
+    }
+
+    /**
+     * The About dialog shows the icon inside the scene graph rather than as a window icon, so it
+     * wants live vector at a chosen size and none of the PNG round-trip {@link AppIcon#image} needs.
+     */
+    @Test
+    void theVectorCanBeAskedForAtAGivenEdgeLength() {
+        Group[] holder = new Group[1];
+        interact(() -> holder[0] = AppIcon.vector(72));
+
+        assertAll(
+                () -> assertEquals(72.0, holder[0].getLayoutBounds().getWidth(), 0.01),
+                () -> assertEquals(72.0, holder[0].getLayoutBounds().getHeight(), 0.01));
     }
 
     @Test
