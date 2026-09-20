@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
 
+# Only ever reads the repository: checkout, then a Maven build. Declared explicitly rather than
+# relying on the repository default, which is a setting that can change out from under the workflow.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
