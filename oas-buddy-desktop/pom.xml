@@ -97,6 +97,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <!-- JavaFX loads its native libraries via System::load, a restricted method: from
+               Java 24 that prints a four-line warning, and a future release will block it
+               outright unless native access is granted. Surefire puts JavaFX on the classpath,
+               so the grant has to name ALL-UNNAMED rather than the module. -->
+          <argLine>--enable-native-access=ALL-UNNAMED</argLine>
           <systemPropertyVariables>
             <!-- So AppInfoTest can check that version.properties really was filtered, instead of
                  only checking that it holds something. -->
@@ -110,6 +115,12 @@
         <version>0.0.8</version>
         <configuration>
           <mainClass>${javafx.mainClass}</mainClass>
+          <!-- Same native-access grant as above, but this plugin launches JavaFX from the
+               module path, where the grant must name javafx.graphics - ALL-UNNAMED would not
+               cover it (and a module name the JVM does not know is itself a warning). -->
+          <options>
+            <option>--enable-native-access=javafx.graphics</option>
+          </options>
         </configuration>
       </plugin>
     </plugins>
@@ -171,6 +182,13 @@
             <input>${jpackage.input}</input>
             <mainJar>${project.build.finalName}.jar</mainJar>
             <mainClass>${javafx.mainClass}</mainClass>
+            <!-- jpackage puts every jar from the input directory on the classpath, so the
+                 installed app is the unnamed-module case: grant native access there too, or the
+                 launcher prints the JavaFX System::load warning to whatever stderr an installed
+                 app has. -->
+            <javaOptions>
+              <javaOption>--enable-native-access=ALL-UNNAMED</javaOption>
+            </javaOptions>
           </configuration>
         </plugin>
       </plugins>
