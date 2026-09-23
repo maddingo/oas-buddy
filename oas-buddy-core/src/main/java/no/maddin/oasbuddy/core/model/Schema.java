@@ -180,6 +180,32 @@ public final class Schema {
         setFlag("deprecated", deprecated);
     }
 
+    /** @return the constraint's value as written, or {@code null} if absent */
+    public JsonNode getConstraint(Constraint constraint) {
+        return node.get(constraint.key());
+    }
+
+    /** {@code null} removes the key. */
+    public void setConstraint(Constraint constraint, JsonNode value) {
+        setValue(constraint.key(), value);
+    }
+
+    /**
+     * The constraints present on this schema that do not apply to its type. Changing the type
+     * hides a constraint rather than deleting it, so an integer that becomes a number and back
+     * keeps its bounds; this is what lets the editor say what it is not showing.
+     */
+    public List<Constraint> constraintsNotApplying() {
+        String type = getType();
+        List<Constraint> present = new ArrayList<>();
+        for (Constraint constraint : Constraint.values()) {
+            if (node.has(constraint.key()) && !constraint.appliesTo(type)) {
+                present.add(constraint);
+            }
+        }
+        return present;
+    }
+
     public List<String> getRequired() {
         List<String> required = new ArrayList<>();
         var existing = node.get("required");

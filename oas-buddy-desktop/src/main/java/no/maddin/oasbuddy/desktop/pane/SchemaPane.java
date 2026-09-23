@@ -13,6 +13,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
 import java.util.HashSet;
 import java.util.List;
@@ -93,6 +94,9 @@ public final class SchemaPane {
         Node additionalControls = additionalPropertiesControls(schema, schemaNames);
         grid.addRow(row, additionalLabel, additionalControls);
 
+        SchemaConstraints constraints = new SchemaConstraints(schema);
+        constraints.node().setId("schema-constraints");
+
         Runnable showRowsForType = () -> {
             boolean array = "array".equals(schema.getType());
             setShown(array, itemsLabel, itemsBox);
@@ -107,6 +111,7 @@ public final class SchemaPane {
                 itemsBox.setValue(null);
             }
             showRowsForType.run();
+            constraints.refresh();
         });
 
         Node values = SchemaDetails.build(schema, false);
@@ -132,6 +137,7 @@ public final class SchemaPane {
                 FormFields.headerWithDelete("Schema", "delete-schema", "Delete schema",
                         () -> onRemoveSchema.accept(schemaName)), grid,
                 FormFields.heading("Values"), values,
+                FormFields.heading("Constraints"), constraints.node(),
                 FormFields.heading("Properties"), properties.grid(),
                 new HBox(8, propertyNameField, addPropertyButton));
     }
@@ -291,7 +297,9 @@ public final class SchemaPane {
             grid.add(removeButton, 5, row++);
 
             if (!reference && expanded.contains(name)) {
-                Node details = SchemaDetails.build(property, true);
+                // A type change rebuilds these rows, so the constraints follow the type without a refresh.
+                VBox details = new VBox(10, SchemaDetails.build(property, true),
+                        FormFields.columnHeading("Constraints"), new SchemaConstraints(property).node());
                 details.getStyleClass().add(Styles.BORDERED);
                 grid.add(details, 1, row++, COLUMNS - 1, 1);
             }
