@@ -46,6 +46,61 @@ class DocumentRoundTripTest {
         assertRoundTrips("secured.json", DocumentFormat.JSON);
     }
 
+    @Test
+    void schemaStructureRoundTripsInYaml() throws IOException {
+        assertRoundTrips("structured.yaml", DocumentFormat.YAML);
+    }
+
+    @Test
+    void schemaStructureRoundTripsInJson() throws IOException {
+        assertRoundTrips("structured.json", DocumentFormat.JSON);
+    }
+
+    /**
+     * Array items, property references and both forms of {@code additionalProperties}, built
+     * through the facade, must come out exactly as the fixture that states them by hand.
+     */
+    @Test
+    void schemaStructureBuiltThroughTheFacadeMatchesTheFixture() throws IOException {
+        OasDocument built = OasDocument.newDocument(DocumentFormat.YAML);
+        var schemas = built.getComponents().getSchemas();
+
+        var pets = schemas.addSchema("Pets");
+        pets.changeTypeTo("array");
+        pets.createItems().referTo("Pet");
+
+        var pet = schemas.addSchema("Pet");
+        pet.changeTypeTo("object");
+        pet.setRequired(List.of("id", "name"));
+        var id = pet.addProperty("id");
+        id.changeTypeTo("integer");
+        id.setFormat("int64");
+        pet.addProperty("name").changeTypeTo("string");
+        var tags = pet.addProperty("tags");
+        tags.changeTypeTo("array");
+        tags.createItems().changeTypeTo("string");
+        pet.addProperty("owner").referTo("Owner");
+        var friends = pet.addProperty("friends");
+        friends.changeTypeTo("array");
+        friends.createItems().referTo("Pet");
+        pet.setAdditionalPropertiesAllowed(false);
+
+        var owner = schemas.addSchema("Owner");
+        owner.changeTypeTo("object");
+        owner.addProperty("name").changeTypeTo("string");
+        owner.createAdditionalPropertiesSchema().changeTypeTo("string");
+
+        var labels = schemas.addSchema("Labels");
+        labels.changeTypeTo("object");
+        labels.createAdditionalPropertiesSchema().referTo("Owner");
+
+        JsonNode expected = loadFixture("structured.yaml", DocumentFormat.YAML).getRoot().get("components");
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(built), DocumentFormat.YAML);
+
+        assertEquals(fieldOrder(expected), fieldOrder(reloaded.getRoot().get("components")));
+        assertEquals(expected, reloaded.getRoot().get("components"));
+    }
+
     /**
      * Regression guard rather than a driver: the editor cannot edit an oauth2 scheme, so the one
      * thing it owes such a scheme is to leave it exactly as loaded even while the schemes around it
