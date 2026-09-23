@@ -1,5 +1,6 @@
 package no.maddin.oasbuddy.core.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.document.JsonNodes;
@@ -18,6 +19,9 @@ public final class Schema {
     private static final String REF = "$ref";
     private static final String ITEMS = "items";
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
+    private static final String ENUM = "enum";
+    private static final String DEFAULT = "default";
+    private static final String EXAMPLE = "example";
 
     private final ObjectNode node;
 
@@ -92,6 +96,88 @@ public final class Schema {
 
     public void setDescription(String description) {
         JsonNodes.setText(node, "description", description);
+    }
+
+    public String getTitle() {
+        return JsonNodes.text(node, "title");
+    }
+
+    public void setTitle(String title) {
+        JsonNodes.setText(node, "title", title);
+    }
+
+    /** The allowed values, in order, as typed values (see {@link SchemaValues}). Empty if none. */
+    public List<JsonNode> getEnum() {
+        List<JsonNode> values = new ArrayList<>();
+        if (node.get(ENUM) instanceof ArrayNode arrayNode) {
+            arrayNode.forEach(values::add);
+        }
+        return values;
+    }
+
+    /** Replaces the allowed values; an empty list removes {@code enum} rather than leaving {@code []}. */
+    public void setEnum(List<JsonNode> values) {
+        if (values.isEmpty()) {
+            node.remove(ENUM);
+            return;
+        }
+        ArrayNode array = JsonNodes.arrayChild(node, ENUM);
+        array.removeAll();
+        values.forEach(array::add);
+    }
+
+    /**
+     * @return the value, or {@code null} if absent. A JSON {@code null} is a legitimate default and
+     *         comes back as a {@code NullNode}, not as {@code null}.
+     */
+    public JsonNode getDefault() {
+        return node.get(DEFAULT);
+    }
+
+    /** {@code null} removes the key. */
+    public void setDefault(JsonNode value) {
+        setValue(DEFAULT, value);
+    }
+
+    public JsonNode getExample() {
+        return node.get(EXAMPLE);
+    }
+
+    /** {@code null} removes the key. */
+    public void setExample(JsonNode value) {
+        setValue(EXAMPLE, value);
+    }
+
+    public boolean isNullable() {
+        return flag("nullable");
+    }
+
+    public void setNullable(boolean nullable) {
+        setFlag("nullable", nullable);
+    }
+
+    public boolean isReadOnly() {
+        return flag("readOnly");
+    }
+
+    public void setReadOnly(boolean readOnly) {
+        setFlag("readOnly", readOnly);
+    }
+
+    public boolean isWriteOnly() {
+        return flag("writeOnly");
+    }
+
+    public void setWriteOnly(boolean writeOnly) {
+        setFlag("writeOnly", writeOnly);
+    }
+
+    public boolean isDeprecated() {
+        return flag("deprecated");
+    }
+
+    public void setDeprecated(boolean deprecated) {
+        setFlag("deprecated", deprecated);
     }
 
     public List<String> getRequired() {
@@ -178,5 +264,25 @@ public final class Schema {
     /** The schema form, replacing a boolean form with an empty schema if need be. */
     public Schema createAdditionalPropertiesSchema() {
         return new Schema(JsonNodes.objectChild(node, ADDITIONAL_PROPERTIES));
+    }
+
+    private void setValue(String field, JsonNode value) {
+        if (value == null) {
+            node.remove(field);
+        } else {
+            node.set(field, value);
+        }
+    }
+
+    private boolean flag(String field) {
+        return Boolean.TRUE.equals(JsonNodes.bool(node, field));
+    }
+
+    /**
+     * Every flag defaults to {@code false}, so only {@code true} is written: an untouched schema
+     * must not gain a {@code readOnly: false} it never had.
+     */
+    private void setFlag(String field, boolean value) {
+        JsonNodes.setBool(node, field, value ? Boolean.TRUE : null);
     }
 }

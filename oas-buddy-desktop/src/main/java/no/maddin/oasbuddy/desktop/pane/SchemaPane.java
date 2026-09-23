@@ -9,11 +9,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -23,6 +26,7 @@ public final class SchemaPane {
     /** What an array's elements or an object's additional properties can be, besides a reference. */
     private static final List<String> ELEMENT_TYPES = List.of("string", "integer", "number", "boolean");
     private static final double TYPE_COLUMN_WIDTH = 140;
+    private static final int COLUMNS = 6;
 
     /** The forms {@code additionalProperties} can take, as the picker offers them. */
     enum AdditionalProperties {
@@ -69,6 +73,7 @@ public final class SchemaPane {
         typeBox.getItems().addAll(TYPES);
         typeBox.setValue(schema.getType());
         grid.addRow(row++, new Label("Type"), typeBox);
+        FormFields.textRow(grid, row++, "Title", schema::getTitle, schema::setTitle);
 
         ComboBox<TypeChoice> itemsBox = elementTypeBox(schema::getItems, schema::createItems, schemaNames);
         itemsBox.setId("schema-items");
@@ -104,8 +109,11 @@ public final class SchemaPane {
             showRowsForType.run();
         });
 
-        GridPane propertiesGrid = propertiesGrid();
-        refreshProperties(schema, schemaNames, propertiesGrid);
+        Node values = SchemaDetails.build(schema, false);
+        values.setId("schema-values");
+
+        PropertyRows properties = new PropertyRows(schema, schemaNames, propertiesGrid(), new HashSet<>());
+        properties.refresh();
 
         TextField propertyNameField = new TextField();
         propertyNameField.setPromptText("propertyName");
@@ -116,14 +124,15 @@ public final class SchemaPane {
             if (name != null && !name.isBlank()) {
                 schema.addProperty(name.strip());
                 propertyNameField.clear();
-                refreshProperties(schema, schemaNames, propertiesGrid);
+                properties.refresh();
             }
         });
 
         return FormFields.root(
                 FormFields.headerWithDelete("Schema", "delete-schema", "Delete schema",
                         () -> onRemoveSchema.accept(schemaName)), grid,
-                FormFields.heading("Properties"), propertiesGrid,
+                FormFields.heading("Values"), values,
+                FormFields.heading("Properties"), properties.grid(),
                 new HBox(8, propertyNameField, addPropertyButton));
     }
 
@@ -187,7 +196,7 @@ public final class SchemaPane {
     }
 
     /**
-     * One shared grid for all property rows, so the name/type/items/format/remove columns line up
+     * One shared grid for all property rows, so the name/type/items/format columns line up
      * regardless of how long the individual property names are.
      */
     private static GridPane propertiesGrid() {
@@ -198,30 +207,41 @@ public final class SchemaPane {
                 FormFields.column(HPos.LEFT, Priority.NEVER),
                 FormFields.column(HPos.LEFT, Priority.NEVER),
                 FormFields.column(HPos.LEFT, Priority.ALWAYS),
+                FormFields.column(HPos.RIGHT, Priority.NEVER),
                 FormFields.column(HPos.RIGHT, Priority.NEVER));
         return grid;
     }
 
-    private static void refreshProperties(Schema schema, List<String> schemaNames, GridPane grid) {
-        grid.getChildren().clear();
+    /**
+     * The property rows, rebuilt whenever a change decides which cells a row has. Which rows have
+     * their details open is pane state, kept across rebuilds so a type change does not fold them.
+     */
+    private record PropertyRows(Schema schema, List<String> schemaNames, GridPane grid, Set<String> expanded) {
 
-        List<String> names = schema.propertyNames();
-        if (names.isEmpty()) {
-            Label empty = new Label("No properties yet.");
-            empty.getStyleClass().add(Styles.TEXT_MUTED);
-            grid.add(empty, 0, 0, 5, 1);
-            return;
+        void refresh() {
+            grid.getChildren().clear();
+
+            List<String> names = schema.propertyNames();
+            if (names.isEmpty()) {
+                Label empty = new Label("No properties yet.");
+                empty.getStyleClass().add(Styles.TEXT_MUTED);
+                grid.add(empty, 0, 0, COLUMNS, 1);
+                return;
+            }
+
+            grid.addRow(0, FormFields.columnHeading("Property"), FormFields.columnHeading("Type"),
+                    FormFields.columnHeading("Items"), FormFields.columnHeading("Format"));
+
+            int row = 1;
+            for (String name : names) {
+                row = addRow(name, schema.getProperty(name), row);
+            }
         }
 
-        grid.addRow(0, FormFields.columnHeading("Property"), FormFields.columnHeading("Type"),
-                FormFields.columnHeading("Items"), FormFields.columnHeading("Format"));
-
-        int row = 1;
-        for (String name : names) {
-            Schema property = schema.getProperty(name);
+        /** @return the next free row */
+        private int addRow(String name, Schema property, int row) {
             TypeChoice choice = TypeChoice.of(property);
 
-            // The type decides which of the other cells exist, so a change rebuilds the rows.
             ComboBox<TypeChoice> typeBox = new ComboBox<>();
             typeBox.getItems().addAll(TypeChoice.choices(TYPES, schemaNames));
             typeBox.setValue(choice);
@@ -229,7 +249,7 @@ public final class SchemaPane {
             typeBox.valueProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal != null) {
                     newVal.applyTo(property);
-                    refreshProperties(schema, schemaNames, grid);
+                    refresh();
                 }
             });
             grid.add(new Label(name), 0, row);
@@ -239,23 +259,43 @@ public final class SchemaPane {
                 grid.add(elementTypeBox(property::getItems, property::createItems, schemaNames), 2, row);
             }
 
-            if (choice == null || !choice.isReference()) {
+            boolean reference = choice != null && choice.isReference();
+            if (!reference) {
                 TextField formatField = new TextField(property.getFormat() == null ? "" : property.getFormat());
                 formatField.setPromptText("format");
                 formatField.setMaxWidth(Double.MAX_VALUE);
                 formatField.textProperty().addListener((obs, oldVal, newVal) -> property.setFormat(newVal));
                 grid.add(formatField, 3, row);
+
+                // OAS 3.0 ignores whatever sits beside a $ref, so a reference gets no details to edit.
+                ToggleButton detailsButton = new ToggleButton("Details");
+                detailsButton.setSelected(expanded.contains(name));
+                detailsButton.setOnAction(e -> {
+                    if (detailsButton.isSelected()) {
+                        expanded.add(name);
+                    } else {
+                        expanded.remove(name);
+                    }
+                    refresh();
+                });
+                grid.add(detailsButton, 4, row);
             }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
             removeButton.setOnAction(e -> {
                 schema.removeProperty(name);
-                refreshProperties(schema, schemaNames, grid);
+                expanded.remove(name);
+                refresh();
             });
-            grid.add(removeButton, 4, row);
-            row++;
+            grid.add(removeButton, 5, row++);
+
+            if (!reference && expanded.contains(name)) {
+                Node details = SchemaDetails.build(property, true);
+                details.getStyleClass().add(Styles.BORDERED);
+                grid.add(details, 1, row++, COLUMNS - 1, 1);
+            }
+            return row;
         }
     }
-
 }
