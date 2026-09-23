@@ -19,6 +19,13 @@ class OasValidatorTest {
         assertTrue(result.isValid(), () -> "Unexpected messages: " + result.messages());
     }
 
+    /** Array items, property references and additionalProperties, as the schema editor writes them. */
+    @Test
+    void schemaStructureFixtureHasNoErrors() throws IOException {
+        ValidationResult result = validator.validate(readFixture("structured.yaml"));
+        assertTrue(result.isValid(), () -> "Unexpected messages: " + result.messages());
+    }
+
     @Test
     void invalidFixtureHasErrors() throws IOException {
         ValidationResult result = validator.validate(readFixture("invalid.yaml"));

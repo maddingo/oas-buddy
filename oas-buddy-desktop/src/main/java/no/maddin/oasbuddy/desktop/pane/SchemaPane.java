@@ -15,11 +15,41 @@ import javafx.scene.layout.Priority;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class SchemaPane {
 
     private static final List<String> TYPES = List.of("object", "array", "string", "integer", "number", "boolean");
+    /** What an array's elements or an object's additional properties can be, besides a reference. */
+    private static final List<String> ELEMENT_TYPES = List.of("string", "integer", "number", "boolean");
     private static final double TYPE_COLUMN_WIDTH = 140;
+
+    /** The forms {@code additionalProperties} can take, as the picker offers them. */
+    enum AdditionalProperties {
+        UNSPECIFIED("not specified"),
+        ANY("any value"),
+        NONE("none"),
+        TYPED("of type…");
+
+        private final String label;
+
+        AdditionalProperties(String label) {
+            this.label = label;
+        }
+
+        static AdditionalProperties of(Schema schema) {
+            if (schema.getAdditionalPropertiesSchema() != null) {
+                return TYPED;
+            }
+            Boolean allowed = schema.getAdditionalPropertiesAllowed();
+            return allowed == null ? UNSPECIFIED : allowed ? ANY : NONE;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
 
     private SchemaPane() {
     }
@@ -30,26 +60,52 @@ public final class SchemaPane {
      */
     public static Node build(OasDocument document, String schemaName, Consumer<String> onRemoveSchema) {
         Schema schema = document.getComponents().getSchemas().getSchema(schemaName);
+        List<String> schemaNames = document.getComponents().getSchemas().names();
 
         GridPane grid = FormFields.grid();
         int row = 0;
         ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.setId("schema-type");
         typeBox.getItems().addAll(TYPES);
         typeBox.setValue(schema.getType());
-        typeBox.valueProperty().addListener((obs, oldVal, newVal) -> schema.setType(newVal));
         grid.addRow(row++, new Label("Type"), typeBox);
+
+        ComboBox<TypeChoice> itemsBox = elementTypeBox(schema::getItems, schema::createItems, schemaNames);
+        itemsBox.setId("schema-items");
+        Label itemsLabel = new Label("Items");
+        grid.addRow(row++, itemsLabel, itemsBox);
 
         FormFields.textRow(grid, row++, "Format", schema::getFormat, schema::setFormat);
         FormFields.textAreaRow(grid, row++, "Description", schema::getDescription, schema::setDescription);
-        FormFields.textRow(grid, row,
+        FormFields.textRow(grid, row++,
                 "Required properties (comma separated)",
                 () -> String.join(", ", schema.getRequired()),
                 value -> schema.setRequired(value == null || value.isBlank()
                         ? List.of()
                         : List.of(value.split("\\s*,\\s*"))));
 
+        Label additionalLabel = new Label("Additional properties");
+        Node additionalControls = additionalPropertiesControls(schema, schemaNames);
+        grid.addRow(row, additionalLabel, additionalControls);
+
+        Runnable showRowsForType = () -> {
+            boolean array = "array".equals(schema.getType());
+            setShown(array, itemsLabel, itemsBox);
+            // Without a type a schema may still be an object; only a type that rules it out hides the row.
+            boolean object = schema.getType() == null || "object".equals(schema.getType());
+            setShown(object, additionalLabel, additionalControls);
+        };
+        showRowsForType.run();
+        typeBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            schema.changeTypeTo(newVal);
+            if (!"array".equals(newVal)) {
+                itemsBox.setValue(null);
+            }
+            showRowsForType.run();
+        });
+
         GridPane propertiesGrid = propertiesGrid();
-        refreshProperties(schema, propertiesGrid);
+        refreshProperties(schema, schemaNames, propertiesGrid);
 
         TextField propertyNameField = new TextField();
         propertyNameField.setPromptText("propertyName");
@@ -60,7 +116,7 @@ public final class SchemaPane {
             if (name != null && !name.isBlank()) {
                 schema.addProperty(name.strip());
                 propertyNameField.clear();
-                refreshProperties(schema, propertiesGrid);
+                refreshProperties(schema, schemaNames, propertiesGrid);
             }
         });
 
@@ -72,7 +128,66 @@ public final class SchemaPane {
     }
 
     /**
-     * One shared grid for all property rows, so the name/type/format/remove columns line up
+     * The mode picker, plus a type picker revealed only for the schema form. Choosing that form
+     * writes an empty schema straight away — which means "any value", same as {@code true} — so
+     * the document never disagrees with what the picker shows while no type has been chosen yet.
+     */
+    private static Node additionalPropertiesControls(Schema schema, List<String> schemaNames) {
+        ComboBox<AdditionalProperties> modeBox = new ComboBox<>();
+        modeBox.setId("schema-additional-properties");
+        modeBox.getItems().addAll(AdditionalProperties.values());
+        modeBox.setValue(AdditionalProperties.of(schema));
+
+        ComboBox<TypeChoice> typeBox = elementTypeBox(
+                schema::getAdditionalPropertiesSchema, schema::createAdditionalPropertiesSchema, schemaNames);
+        typeBox.setId("schema-additional-properties-type");
+        setShown(modeBox.getValue() == AdditionalProperties.TYPED, typeBox);
+
+        modeBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            switch (newVal) {
+                case UNSPECIFIED -> schema.setAdditionalPropertiesAllowed(null);
+                case ANY -> schema.setAdditionalPropertiesAllowed(true);
+                case NONE -> schema.setAdditionalPropertiesAllowed(false);
+                case TYPED -> schema.createAdditionalPropertiesSchema();
+            }
+            if (newVal != AdditionalProperties.TYPED) {
+                typeBox.setValue(null);
+            }
+            setShown(newVal == AdditionalProperties.TYPED, typeBox);
+        });
+        return new HBox(8, modeBox, typeBox);
+    }
+
+    /**
+     * A picker for a nested schema — array items, additional properties — offering the element
+     * types and a reference to each declared schema. Nothing is written until a choice is made.
+     */
+    private static ComboBox<TypeChoice> elementTypeBox(Supplier<Schema> existing, Supplier<Schema> create,
+                                                       List<String> schemaNames) {
+        ComboBox<TypeChoice> box = new ComboBox<>();
+        box.getItems().addAll(TypeChoice.choices(ELEMENT_TYPES, schemaNames));
+        box.setPromptText("element type");
+        box.setPrefWidth(TYPE_COLUMN_WIDTH);
+        Schema current = existing.get();
+        box.setValue(current == null ? null : TypeChoice.of(current));
+        box.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                newVal.applyTo(create.get());
+            }
+        });
+        return box;
+    }
+
+    /** Hides a row's nodes without deleting what they edit, and takes them out of the layout. */
+    private static void setShown(boolean shown, Node... nodes) {
+        for (Node node : nodes) {
+            node.setVisible(shown);
+            node.setManaged(shown);
+        }
+    }
+
+    /**
+     * One shared grid for all property rows, so the name/type/items/format/remove columns line up
      * regardless of how long the individual property names are.
      */
     private static GridPane propertiesGrid() {
@@ -81,48 +196,65 @@ public final class SchemaPane {
         grid.getColumnConstraints().addAll(
                 FormFields.column(HPos.LEFT, Priority.NEVER),
                 FormFields.column(HPos.LEFT, Priority.NEVER),
+                FormFields.column(HPos.LEFT, Priority.NEVER),
                 FormFields.column(HPos.LEFT, Priority.ALWAYS),
                 FormFields.column(HPos.RIGHT, Priority.NEVER));
         return grid;
     }
 
-    private static void refreshProperties(Schema schema, GridPane grid) {
+    private static void refreshProperties(Schema schema, List<String> schemaNames, GridPane grid) {
         grid.getChildren().clear();
 
         List<String> names = schema.propertyNames();
         if (names.isEmpty()) {
             Label empty = new Label("No properties yet.");
             empty.getStyleClass().add(Styles.TEXT_MUTED);
-            grid.add(empty, 0, 0, 4, 1);
+            grid.add(empty, 0, 0, 5, 1);
             return;
         }
 
         grid.addRow(0, FormFields.columnHeading("Property"), FormFields.columnHeading("Type"),
-                FormFields.columnHeading("Format"));
+                FormFields.columnHeading("Items"), FormFields.columnHeading("Format"));
 
         int row = 1;
         for (String name : names) {
             Schema property = schema.getProperty(name);
+            TypeChoice choice = TypeChoice.of(property);
 
-            ComboBox<String> typeBox = new ComboBox<>();
-            typeBox.getItems().addAll(TYPES);
-            typeBox.setValue(property.getType());
+            // The type decides which of the other cells exist, so a change rebuilds the rows.
+            ComboBox<TypeChoice> typeBox = new ComboBox<>();
+            typeBox.getItems().addAll(TypeChoice.choices(TYPES, schemaNames));
+            typeBox.setValue(choice);
             typeBox.setPrefWidth(TYPE_COLUMN_WIDTH);
-            typeBox.valueProperty().addListener((obs, oldVal, newVal) -> property.setType(newVal));
+            typeBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    newVal.applyTo(property);
+                    refreshProperties(schema, schemaNames, grid);
+                }
+            });
+            grid.add(new Label(name), 0, row);
+            grid.add(typeBox, 1, row);
 
-            TextField formatField = new TextField(property.getFormat() == null ? "" : property.getFormat());
-            formatField.setPromptText("format");
-            formatField.setMaxWidth(Double.MAX_VALUE);
-            formatField.textProperty().addListener((obs, oldVal, newVal) -> property.setFormat(newVal));
+            if (choice != null && choice.isArray()) {
+                grid.add(elementTypeBox(property::getItems, property::createItems, schemaNames), 2, row);
+            }
+
+            if (choice == null || !choice.isReference()) {
+                TextField formatField = new TextField(property.getFormat() == null ? "" : property.getFormat());
+                formatField.setPromptText("format");
+                formatField.setMaxWidth(Double.MAX_VALUE);
+                formatField.textProperty().addListener((obs, oldVal, newVal) -> property.setFormat(newVal));
+                grid.add(formatField, 3, row);
+            }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
             removeButton.setOnAction(e -> {
                 schema.removeProperty(name);
-                refreshProperties(schema, grid);
+                refreshProperties(schema, schemaNames, grid);
             });
-
-            grid.addRow(row++, new Label(name), typeBox, formatField, removeButton);
+            grid.add(removeButton, 4, row);
+            row++;
         }
     }
 

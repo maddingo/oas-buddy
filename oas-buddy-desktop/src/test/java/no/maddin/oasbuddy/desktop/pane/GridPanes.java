@@ -38,6 +38,19 @@ final class GridPanes {
                 .orElseThrow(() -> new AssertionError("no button for " + entry));
     }
 
+    /** The cell in the given column of an entry's row, or {@code null} if that cell is empty. */
+    static Node cellInRowOf(GridPane grid, String entry, int column) {
+        int targetRow = grid.getChildren().stream()
+                .filter(cell -> cell instanceof Label label && entry.equals(label.getText()) && column(cell) == 0)
+                .mapToInt(GridPanes::row)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no row for " + entry));
+        return grid.getChildren().stream()
+                .filter(cell -> row(cell) == targetRow && column(cell) == column)
+                .findFirst()
+                .orElse(null);
+    }
+
     static int row(Node cell) {
         Integer index = GridPane.getRowIndex(cell);
         return index == null ? 0 : index;

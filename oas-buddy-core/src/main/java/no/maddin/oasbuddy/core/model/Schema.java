@@ -10,6 +10,15 @@ import java.util.List;
 
 public final class Schema {
 
+    /** Where a {@code $ref} to a schema declared in this document's components points. */
+    public static final String COMPONENT_REF_PREFIX = "#/components/schemas/";
+
+    private static final String TYPE = "type";
+    private static final String FORMAT = "format";
+    private static final String REF = "$ref";
+    private static final String ITEMS = "items";
+    private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
+
     private final ObjectNode node;
 
     public Schema(ObjectNode node) {
@@ -17,27 +26,64 @@ public final class Schema {
     }
 
     public String getRef() {
-        return JsonNodes.text(node, "$ref");
+        return JsonNodes.text(node, REF);
     }
 
     public void setRef(String ref) {
-        JsonNodes.setText(node, "$ref", ref);
+        JsonNodes.setText(node, REF, ref);
+    }
+
+    /**
+     * @return the name of the component schema this schema refers to, or {@code null} if it is not
+     *         a reference, or refers somewhere other than {@code #/components/schemas}
+     */
+    public String getReferencedSchemaName() {
+        String ref = getRef();
+        return ref != null && ref.startsWith(COMPONENT_REF_PREFIX)
+                ? ref.substring(COMPONENT_REF_PREFIX.length())
+                : null;
+    }
+
+    /**
+     * Makes this schema a reference to a component schema, as a type picker does. The inline type
+     * it replaces goes with it — {@code type}, {@code format} and {@code items}, which a
+     * {@code $ref} would make dead weight — but nothing else: a description or an {@code x-}
+     * extension is not the picker's to drop.
+     */
+    public void referTo(String schemaName) {
+        node.remove(List.of(TYPE, FORMAT, ITEMS));
+        setRef(COMPONENT_REF_PREFIX + schemaName);
     }
 
     public String getType() {
-        return JsonNodes.text(node, "type");
+        return JsonNodes.text(node, TYPE);
     }
 
     public void setType(String type) {
-        JsonNodes.setText(node, "type", type);
+        JsonNodes.setText(node, TYPE, type);
+    }
+
+    /**
+     * Changes the type as a type picker does, dropping what the new type no longer uses: the
+     * {@code $ref} it replaces, and {@code items} unless the new type is {@code array}.
+     *
+     * <p>{@link #setType} stays a plain setter, because a free-text field calls it on every
+     * keystroke, and typing over {@code array} must not throw away its {@code items} on the way.
+     */
+    public void changeTypeTo(String type) {
+        node.remove(REF);
+        if (!"array".equals(type)) {
+            node.remove(ITEMS);
+        }
+        setType(type);
     }
 
     public String getFormat() {
-        return JsonNodes.text(node, "format");
+        return JsonNodes.text(node, FORMAT);
     }
 
     public void setFormat(String format) {
-        JsonNodes.setText(node, "format", format);
+        JsonNodes.setText(node, FORMAT, format);
     }
 
     public String getDescription() {
@@ -100,7 +146,37 @@ public final class Schema {
         }
     }
 
+    /** The element schema of an array, or {@code null} if there is none. Reads only. */
     public Schema getItems() {
-        return new Schema(JsonNodes.objectChild(node, "items"));
+        return node.get(ITEMS) instanceof ObjectNode items ? new Schema(items) : null;
+    }
+
+    /** The element schema of an array, adding an empty one if there is none. */
+    public Schema createItems() {
+        return new Schema(JsonNodes.objectChild(node, ITEMS));
+    }
+
+    /**
+     * @return the boolean form of {@code additionalProperties}, or {@code null} when it is absent
+     *         or in its schema form
+     */
+    public Boolean getAdditionalPropertiesAllowed() {
+        var value = node.get(ADDITIONAL_PROPERTIES);
+        return value != null && value.isBoolean() ? value.asBoolean() : null;
+    }
+
+    /** Sets the boolean form, replacing a schema form; {@code null} removes the key. */
+    public void setAdditionalPropertiesAllowed(Boolean allowed) {
+        JsonNodes.setBool(node, ADDITIONAL_PROPERTIES, allowed);
+    }
+
+    /** The schema form of {@code additionalProperties}, or {@code null}. Reads only. */
+    public Schema getAdditionalPropertiesSchema() {
+        return node.get(ADDITIONAL_PROPERTIES) instanceof ObjectNode schema ? new Schema(schema) : null;
+    }
+
+    /** The schema form, replacing a boolean form with an empty schema if need be. */
+    public Schema createAdditionalPropertiesSchema() {
+        return new Schema(JsonNodes.objectChild(node, ADDITIONAL_PROPERTIES));
     }
 }
