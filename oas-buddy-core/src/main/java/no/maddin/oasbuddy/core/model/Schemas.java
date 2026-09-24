@@ -46,4 +46,16 @@ public final class Schemas {
             existing.remove(name);
         }
     }
+
+    /**
+     * Renames a schema, keeping its position in the document. Does not touch any {@code $ref}
+     * that points at it — see {@link SchemaReferences#rewrite}.
+     *
+     * @return {@code false}, changing nothing, if {@code from} does not exist or {@code to} is
+     *         already taken (a collision is refused, never silently overwritten)
+     */
+    public boolean renameSchema(String from, String to) {
+        ObjectNode existing = node.peek();
+        return existing != null && JsonNodes.renameField(existing, from, to);
+    }
 }

@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentRoundTripTest {
 
@@ -199,6 +200,55 @@ class DocumentRoundTripTest {
                 reloaded.getSecurity().requirements().get(1).getScopes("OAuth2Auth"));
         assertEquals(0, reloaded.getRoot().get("paths").get("/pets").get("get").get("security").size(),
                 "an explicitly public operation must stay an empty array, not vanish");
+    }
+
+    /**
+     * The point of {@code JsonNodes.renameField}: a rename must show up in the saved file as one
+     * changed line, not a removal plus an addition at the end.
+     */
+    @Test
+    void renamingASchemaChangesOnlyItsOwnKeyInTheWrittenYaml() throws IOException {
+        OasDocument original = loadFixture("petstore.yaml", DocumentFormat.YAML);
+        List<String> before = List.of(DocumentWriter.write(original).split("\n", -1));
+
+        boolean renamed = original.getComponents().getSchemas().renameSchema("NewPet", "PetDraft");
+
+        List<String> after = List.of(DocumentWriter.write(original).split("\n", -1));
+        assertTrue(renamed);
+        assertEquals(before.size(), after.size(), "a rename must not add or remove any line");
+
+        List<String> changedLines = changedLines(before, after);
+        assertEquals(List.of("    PetDraft:"), changedLines,
+                "only the schema's own key should change, e.g. not move to the end of the map");
+    }
+
+    /** Renaming a schema and rewriting its references together, as the desktop rename flow does. */
+    @Test
+    void renamingASchemaAndRewritingItsReferencesRoundTrips() throws IOException {
+        OasDocument original = loadFixture("petstore.yaml", DocumentFormat.YAML);
+
+        original.getComponents().getSchemas().renameSchema("Pet", "Animal");
+        int rewritten = no.maddin.oasbuddy.core.model.SchemaReferences.rewrite(original, "Pet", "Animal");
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), DocumentFormat.YAML);
+        assertEquals(2, rewritten);
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertTrue(no.maddin.oasbuddy.core.model.SchemaReferences.find(reloaded, "Pet").isEmpty());
+        assertEquals(List.of(
+                        "paths → /pets → get → responses → 200 → content → application/json → schema → items",
+                        "paths → /pets/{petId} → get → responses → 200 → content → application/json → schema"),
+                no.maddin.oasbuddy.core.model.SchemaReferences.find(reloaded, "Animal"));
+    }
+
+    private static List<String> changedLines(List<String> before, List<String> after) {
+        List<String> changed = new ArrayList<>();
+        for (int i = 0; i < before.size(); i++) {
+            if (!before.get(i).equals(after.get(i))) {
+                changed.add(after.get(i));
+            }
+        }
+        return changed;
     }
 
     private static void assertRoundTrips(String fixture, DocumentFormat format) throws IOException {

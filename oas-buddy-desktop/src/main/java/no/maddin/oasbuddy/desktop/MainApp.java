@@ -17,8 +17,10 @@ import no.maddin.oasbuddy.desktop.pane.PathItemPane;
 import no.maddin.oasbuddy.desktop.pane.PathRemoval;
 import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
+import no.maddin.oasbuddy.desktop.pane.PathRename;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
 import no.maddin.oasbuddy.desktop.pane.SchemaRemoval;
+import no.maddin.oasbuddy.desktop.pane.SchemaRename;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
 import no.maddin.oasbuddy.desktop.pane.SecurityPane;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemeCatalog;
@@ -76,6 +78,9 @@ public class MainApp extends Application {
 
     /** Overridden by tests, which cannot answer a modal dialog. */
     private RemovalConfirmation confirmation = RemovalConfirmation.dialog();
+
+    /** Overridden by tests, which cannot answer a modal dialog; its button reads "Rename". */
+    private RemovalConfirmation renameConfirmation = RemovalConfirmation.dialog("Rename");
 
     /** Overridden by tests, which cannot dismiss a modal dialog. */
     private Runnable aboutAction = this::showAbout;
@@ -296,7 +301,7 @@ public class MainApp extends Application {
         for (String path : document.getPaths().pathNames()) {
             PathItem pathItem = document.getPaths().getPathItem(path);
             TreeItem<OutlineNode> pathNode = new TreeItem<>(new OutlineNode(path,
-                    () -> PathItemPane.build(document, path, this::refreshOutline,
+                    () -> PathItemPane.build(document, path, this::refreshOutline, this::renamePath,
                             () -> removePath(path), method -> removeOperation(path, method))));
             for (var entry : pathItem.getOperations().entrySet()) {
                 HttpMethod method = entry.getKey();
@@ -316,7 +321,7 @@ public class MainApp extends Application {
         schemasItem.setExpanded(true);
         for (String name : document.getComponents().getSchemas().names()) {
             schemasItem.getChildren().add(new TreeItem<>(
-                    new OutlineNode(name, () -> SchemaPane.build(document, name, this::removeSchema))));
+                    new OutlineNode(name, () -> SchemaPane.build(document, name, this::renameSchema, this::removeSchema))));
         }
         root.getChildren().add(schemasItem);
 
@@ -346,6 +351,17 @@ public class MainApp extends Application {
     private void removeTag(String tagName) {
         TagRemoval.remove(document, tagName, confirmation,
                 () -> refreshAndSelect("Tags"));
+    }
+
+    /** Selects the renamed schema afterwards, so the editor stays on what the user was editing. */
+    private boolean renameSchema(String from, String to) {
+        return SchemaRename.rename(document, from, to, renameConfirmation,
+                () -> refreshAndSelect("Schemas", to));
+    }
+
+    /** Selects the renamed path afterwards, so the editor stays on what the user was editing. */
+    private boolean renamePath(String from, String to) {
+        return PathRename.rename(document, from, to, () -> refreshAndSelect("Paths", to));
     }
 
     private void removeSecurityScheme(String schemeName) {
@@ -405,6 +421,10 @@ public class MainApp extends Application {
 
     void setConfirmation(RemovalConfirmation confirmation) {
         this.confirmation = confirmation;
+    }
+
+    void setRenameConfirmation(RemovalConfirmation renameConfirmation) {
+        this.renameConfirmation = renameConfirmation;
     }
 
     void setAboutAction(Runnable aboutAction) {
