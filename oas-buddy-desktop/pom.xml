@@ -21,6 +21,11 @@
     <!-- jpackage's app version rejects a "-SNAPSHOT" suffix, so this is kept separate from project.version -->
     <jpackage.appVersion>0.1.0</jpackage.appVersion>
     <jpackage.input>${project.build.directory}/jpackage-input</jpackage.input>
+    <!-- JavaFX is the one dependency that does not go in the flat input directory: put on the
+         classpath it logs "Unsupported JavaFX configuration: classes were loaded from unnamed
+         module ..." at every start, and the configuration is unsupported exactly as the warning
+         says. It goes in this subdirectory instead, named by the launcher's module path option. -->
+    <jpackage.javafx>${jpackage.input}/javafx</jpackage.javafx>
     <jpackage.destination>${project.build.directory}/dist</jpackage.destination>
     <!-- jpackage wants a different icon format per OS, so each jpackage-* profile overrides this.
          All three are generated from docs/branding/oas-buddy-icon.svg by tools/generate-icons.sh. -->
@@ -142,6 +147,19 @@
               <configuration>
                 <outputDirectory>${jpackage.input}</outputDirectory>
                 <includeScope>runtime</includeScope>
+                <excludeGroupIds>org.openjfx</excludeGroupIds>
+              </configuration>
+            </execution>
+            <execution>
+              <id>jpackage-copy-javafx</id>
+              <phase>package</phase>
+              <goals>
+                <goal>copy-dependencies</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${jpackage.javafx}</outputDirectory>
+                <includeScope>runtime</includeScope>
+                <includeGroupIds>org.openjfx</includeGroupIds>
               </configuration>
             </execution>
           </executions>
@@ -164,6 +182,15 @@
                        into the hicolor theme as a genuinely scalable icon (see the postinst in
                        src/main/jpackage/linux). Harmless on the other platforms. -->
                   <copy file="${project.basedir}/src/main/icons/oas-buddy.svg" todir="${jpackage.input}"/>
+                  <!-- Every JavaFX artifact resolves to two jars: the main one, which holds
+                       nothing but a manifest, and the platform-classified one, which holds the
+                       classes and the native libraries. Both claim the same module name, and on
+                       a module path the empty one can win and leave the graphics pipeline
+                       uninitialised, so it has to go. Only the classified jar carries a suffix
+                       after the version, which is what tells the two apart by name. -->
+                  <delete>
+                    <fileset dir="${jpackage.javafx}" includes="javafx-*-${javafx.version}.jar"/>
+                  </delete>
                 </target>
               </configuration>
             </execution>
@@ -182,12 +209,16 @@
             <input>${jpackage.input}</input>
             <mainJar>${project.build.finalName}.jar</mainJar>
             <mainClass>${javafx.mainClass}</mainClass>
-            <!-- jpackage puts every jar from the input directory on the classpath, so the
-                 installed app is the unnamed-module case: grant native access there too, or the
-                 launcher prints the JavaFX System::load warning to whatever stderr an installed
-                 app has. -->
+            <!-- jpackage puts every jar it finds in the input directory on the classpath,
+                 nested ones included, so the JavaFX jars stay on the classpath as well; naming
+                 their directory as a module path is what makes the named modules win, and the
+                 classpath copies are shadowed. That in turn is why the native access grant names
+                 javafx.graphics rather than ALL-UNNAMED, as with the javafx-maven-plugin above:
+                 JavaFX calls System::load from a named module here. -->
             <javaOptions>
-              <javaOption>--enable-native-access=ALL-UNNAMED</javaOption>
+              <javaOption>--module-path=$APPDIR/javafx</javaOption>
+              <javaOption>--add-modules=javafx.controls</javaOption>
+              <javaOption>--enable-native-access=javafx.graphics</javaOption>
             </javaOptions>
           </configuration>
         </plugin>
