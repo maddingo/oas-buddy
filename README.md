@@ -63,6 +63,23 @@ Each installer bundles its own JVM, so the target machine doesn't need Java inst
 opt-in (`-Djpackage`) and only activates for the OS you're actually running on, so a plain
 `mvn package` is unaffected.
 
+### Running it from a terminal on Linux
+
+The `.deb` and `.rpm` install to `/opt/oas-buddy`, and the launcher is `/opt/oas-buddy/bin/oas-buddy`.
+The application menu entry is created for you; `/opt` is not on `PATH`, so for a command you can
+type, link it yourself:
+
+```
+sudo ln -s /opt/oas-buddy/bin/oas-buddy /usr/local/bin/oas-buddy
+```
+
+`/usr/local/bin` is the right place for that — it is the FHS location for software the local
+admin installs, and it comes before `/usr/bin` on a default `PATH`. The packages deliberately
+don't create the link themselves: jpackage has no option for it, so it would mean vendoring
+jpackage's own Debian maintainer scripts and RPM spec template just to add one symlink, and
+Debian policy forbids a package writing into `/usr/local` in the first place. The same one-liner
+works for the portable app-image, pointed at wherever you unpacked it.
+
 Requires the OS-native packaging tool to be installed: `dpkg-deb`/`rpmbuild` on Linux, Xcode
 command line tools on macOS, or the [WiX Toolset](https://wixtoolset.org/) on Windows — all
 preinstalled on GitHub's hosted runners except `rpmbuild`. The `.github/workflows/package.yml`

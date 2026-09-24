@@ -1,0 +1,27 @@
+[Desktop Entry]
+# jpackage's own template, with Icon= pointed at the bundled SVG instead of the PNG it installs.
+# The freedesktop spec allows an absolute path here, so this gives Linux a genuinely scalable app
+# icon. An absolute path rather than a hicolor theme name keeps DEB and RPM identical without
+# vendoring jpackage's maintainer scripts; the /opt path follows <linuxPackageName> in pom.xml.
+#
+# The file name has to match the app name jpackage is called with, which on Linux is the lowercase
+# oas-buddy so that the installed launcher is one too. Name= is therefore spelled out rather than
+# left as jpackage's app-name placeholder, which would put "oas-buddy" in the application menu.
+# Beware when editing: jpackage substitutes its placeholders everywhere in this file, comments
+# included, so naming one here would rewrite the sentence that explains it.
+Name=OAS Buddy
+Comment=APPLICATION_DESCRIPTION
+Exec=APPLICATION_LAUNCHER
+Icon=/opt/oas-buddy/lib/app/oas-buddy.svg
+Terminal=false
+Type=Application
+# Lets the shell match the running window to this entry, so the taskbar/dock shows the app icon
+# and "OAS Buddy" instead of treating it as an unknown window. JavaFX derives WM_CLASS from the
+# Application subclass, so this is the fully qualified name of MainApp and has to be edited if
+# that class is ever renamed or moved; LinuxDesktopEntryTest holds the two together. Verify by
+# hand with: xprop -root _NET_CLIENT_LIST, then xprop -id <id> WM_CLASS
+StartupWMClass=no.maddin.oasbuddy.desktop.MainApp
+# Spelled out for the same reason as Name: jpackage fills this in from its menu-group option,
+# which is separate from the app category in pom.xml and defaults to "Unknown".
+Categories=Development;
+DESKTOP_MIMES

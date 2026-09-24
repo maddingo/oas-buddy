@@ -252,8 +252,15 @@
             <groupId>org.panteleyev</groupId>
             <artifactId>jpackage-maven-plugin</artifactId>
             <configuration>
-              <!-- Supplies our "OAS Buddy.desktop", which points Icon= at the bundled SVG so the
-                   Linux packages get a scalable icon. Applies to DEB, RPM and APP_IMAGE alike. -->
+              <!-- Linux wants a lowercase, space-free command name: this is what the installed
+                   launcher is called, so it becomes /opt/oas-buddy/bin/oas-buddy rather than
+                   /opt/oas-buddy/bin/"OAS Buddy". The application menu still reads "OAS Buddy",
+                   because the desktop entry below spells its Name out instead of inheriting this.
+                   macOS and Windows keep the display name, which is what their bundles show. -->
+              <name>oas-buddy</name>
+              <!-- Supplies our oas-buddy.desktop, which points Icon= at the bundled SVG so the
+                   Linux packages get a scalable icon. Applies to DEB, RPM and APP_IMAGE alike.
+                   jpackage looks the file up by app name, so the two have to agree. -->
               <resourceDir>${jpackage.resourceDir}</resourceDir>
             </configuration>
             <executions>
