@@ -9,12 +9,14 @@ import javafx.geometry.HPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public final class PathItemPane {
@@ -24,13 +26,23 @@ public final class PathItemPane {
 
     /**
      * @param onStructureChanged  run after an operation is added, so the outline picks it up
+     * @param onRenamePath        asked to rename this path to a new, not-yet-used one; returns
+     *                            whether the rename went ahead. The pane only reports the request,
+     *                            it never renames anything itself.
      * @param onRemovePath        asked to remove this whole path
      * @param onRemoveOperation   asked to remove one of its operations; like the other panes this
      *                            one only reports the request, it never removes anything itself
      */
     public static Node build(OasDocument document, String path, Runnable onStructureChanged,
+                             BiFunction<String, String, Boolean> onRenamePath,
                              Runnable onRemovePath, Consumer<HttpMethod> onRemoveOperation) {
         PathItem pathItem = document.getPaths().getPathItem(path);
+
+        TextField nameField = FormFields.renameField(path, candidate ->
+                document.getPaths().pathNames().contains(candidate)
+                        ? "A path named \"" + candidate + "\" already exists."
+                        : onRenamePath.apply(path, candidate) ? null : "");
+        nameField.setId("path-name");
 
         GridPane grid = FormFields.grid();
         int row = 0;
@@ -62,7 +74,8 @@ public final class PathItemPane {
         addOperationLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
         return FormFields.root(
-                FormFields.headerWithDelete("Path", "delete-path", "Delete path", onRemovePath), grid,
+                FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath),
+                grid,
                 FormFields.heading("Operations"), operations,
                 addOperationLabel, methodButtons);
     }

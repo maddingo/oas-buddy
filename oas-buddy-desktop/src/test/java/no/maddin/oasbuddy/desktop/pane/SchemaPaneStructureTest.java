@@ -50,7 +50,7 @@ class SchemaPaneStructureTest extends ApplicationTest {
     }
 
     private void show(String schemaName) {
-        Node pane = SchemaPane.build(document, schemaName, name -> { });
+        Node pane = SchemaPane.build(document, schemaName, (from, to) -> true, name -> { });
         interact(() -> holder.getChildren().setAll(pane));
     }
 

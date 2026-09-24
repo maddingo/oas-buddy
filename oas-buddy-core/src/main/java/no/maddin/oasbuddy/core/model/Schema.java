@@ -3,6 +3,7 @@ package no.maddin.oasbuddy.core.model;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import no.maddin.oasbuddy.core.document.JsonNodes;
 
 import java.util.ArrayList;
@@ -256,6 +257,28 @@ public final class Schema {
         if (properties instanceof ObjectNode objectNode) {
             objectNode.remove(name);
         }
+    }
+
+    /**
+     * Renames a property, keeping its position and body, and renames it in {@code required} too
+     * (in place, at the same index — a JSON array supports that natively, unlike an object field).
+     *
+     * @return {@code false}, changing nothing, if {@code from} does not exist or {@code to} is
+     *         already taken (a collision is refused, never silently overwritten)
+     */
+    public boolean renameProperty(String from, String to) {
+        var properties = node.get("properties");
+        if (!(properties instanceof ObjectNode objectNode) || !JsonNodes.renameField(objectNode, from, to)) {
+            return false;
+        }
+        if (node.get("required") instanceof ArrayNode required) {
+            for (int i = 0; i < required.size(); i++) {
+                if (from.equals(required.get(i).asText())) {
+                    required.set(i, TextNode.valueOf(to));
+                }
+            }
+        }
+        return true;
     }
 
     /** The element schema of an array, or {@code null} if there is none. Reads only. */

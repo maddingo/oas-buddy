@@ -35,28 +35,67 @@ public final class SchemaReferences {
      */
     public static List<String> find(OasDocument document, String schemaName) {
         List<String> usages = new ArrayList<>();
-        collect(document.getRoot(), REF_PREFIX + schemaName, new ArrayDeque<>(), usages);
+        String ref = REF_PREFIX + schemaName;
+        walk(document.getRoot(), new ArrayDeque<>(), (node, location) -> {
+            boolean matches = ref.equals(text(node.get(REF_FIELD)));
+            if (matches) {
+                usages.add(String.join(LOCATION_SEPARATOR, location));
+            }
+            return matches;
+        });
         return usages;
     }
 
-    private static void collect(JsonNode node, String ref, Deque<String> location, List<String> usages) {
+    /**
+     * Rewrites every {@code $ref} pointing at {@code from} to point at {@code to} instead, so a
+     * schema rename never leaves a reference dangling. Shares {@link #find}'s tree walk rather than
+     * a second copy of it.
+     *
+     * @return how many references were rewritten
+     */
+    public static int rewrite(OasDocument document, String from, String to) {
+        String ref = REF_PREFIX + from;
+        String replacement = REF_PREFIX + to;
+        int[] count = {0};
+        walk(document.getRoot(), new ArrayDeque<>(), (node, location) -> {
+            boolean matches = ref.equals(text(node.get(REF_FIELD)));
+            if (matches) {
+                node.put(REF_FIELD, replacement);
+                count[0]++;
+            }
+            return matches;
+        });
+        return count[0];
+    }
+
+    /**
+     * Visits every object in the tree, depth first, tracking the field/index path down to it.
+     *
+     * @return whether {@code node} itself was a match — when it is, its children are not walked,
+     *         since OAS ignores whatever sits beside a {@code $ref} and there is nothing there to find
+     */
+    @FunctionalInterface
+    private interface RefVisitor {
+        boolean visit(ObjectNode node, Deque<String> location);
+    }
+
+    private static void walk(JsonNode node, Deque<String> location, RefVisitor visitor) {
         if (node instanceof ObjectNode objectNode) {
-            if (ref.equals(text(objectNode.get(REF_FIELD)))) {
-                usages.add(String.join(LOCATION_SEPARATOR, location));
+            if (visitor.visit(objectNode, location)) {
                 return;
             }
             Iterator<String> fields = objectNode.fieldNames();
             while (fields.hasNext()) {
                 String field = fields.next();
                 location.addLast(field);
-                collect(objectNode.get(field), ref, location, usages);
+                walk(objectNode.get(field), location, visitor);
                 location.removeLast();
             }
         } else if (node instanceof ArrayNode arrayNode) {
             int index = 0;
             for (JsonNode element : arrayNode) {
                 location.addLast("[" + index++ + "]");
-                collect(element, ref, location, usages);
+                walk(element, location, visitor);
                 location.removeLast();
             }
         }

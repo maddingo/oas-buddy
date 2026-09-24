@@ -39,7 +39,7 @@ class SchemaPaneLayoutTest extends ApplicationTest {
         schema.addProperty("name").setType("string");
         schema.addProperty("aMuchLongerPropertyName").setType("boolean");
 
-        Node pane = SchemaPane.build(document, "Pet", removalRequests::add);
+        Node pane = SchemaPane.build(document, "Pet", (from, to) -> true, removalRequests::add);
         stage.setScene(new Scene(new StackPane(pane), 900, 600));
         stage.show();
     }
