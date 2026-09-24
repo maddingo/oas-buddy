@@ -26,8 +26,8 @@ class OperationPaneTest extends ApplicationTest {
         var operation = document.getPaths().addPath("/pets").addOperation(HttpMethod.GET);
         operation.setOperationId("listPets");
 
-        Node pane = OperationPane.build(operation, List::of, SecuritySchemeCatalog.of(document),
-                removalRequests::incrementAndGet);
+        Node pane = OperationPane.build(operation, List::of, TagCatalog.of(document),
+                SecuritySchemeCatalog.of(document), removalRequests::incrementAndGet);
         stage.setScene(new Scene(new StackPane(pane), 900, 700));
         stage.show();
     }

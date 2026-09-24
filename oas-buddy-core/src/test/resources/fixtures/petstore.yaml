@@ -12,6 +12,9 @@ info:
 servers:
   - url: https://api.example.com/v1
     description: Production server
+tags:
+  - name: pets
+    description: Everything about pets
 paths:
   /pets:
     get:
