@@ -58,7 +58,12 @@ public final class Operation {
         return tags;
     }
 
+    /** An empty list removes the {@code tags} key rather than leaving {@code []}. */
     public void setTags(List<String> tags) {
+        if (tags.isEmpty()) {
+            node.remove("tags");
+            return;
+        }
         ArrayNode array = JsonNodes.arrayChild(node, "tags");
         array.removeAll();
         for (String tag : tags) {

@@ -57,6 +57,35 @@ class DocumentRoundTripTest {
         assertRoundTrips("structured.json", DocumentFormat.JSON);
     }
 
+    /** Root tags and an operation's own tags, built through the facade, round-trip in order. */
+    @Test
+    void tagsRoundTripInYaml() throws IOException {
+        assertTagsRoundTrip(DocumentFormat.YAML);
+    }
+
+    @Test
+    void tagsRoundTripInJson() throws IOException {
+        assertTagsRoundTrip(DocumentFormat.JSON);
+    }
+
+    private static void assertTagsRoundTrip(DocumentFormat format) throws IOException {
+        OasDocument original = OasDocument.newDocument(format);
+        original.getTags().add("pets").setDescription("Everything about pets");
+        original.getTags().add("store");
+        original.getPaths().addPath("/pets").addOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET)
+                .setTags(List.of("store", "pets"));
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertEquals(List.of("pets", "store"), reloaded.getTags().names());
+        assertEquals("Everything about pets", reloaded.getTags().get("pets").getDescription());
+        assertEquals(List.of("store", "pets"),
+                reloaded.getPaths().getPathItem("/pets")
+                        .getOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET).getTags());
+    }
+
     /**
      * Array items, property references and both forms of {@code additionalProperties}, built
      * through the facade, must come out exactly as the fixture that states them by hand.

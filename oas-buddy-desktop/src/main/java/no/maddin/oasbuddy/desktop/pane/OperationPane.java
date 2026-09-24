@@ -20,6 +20,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -29,22 +30,21 @@ public final class OperationPane {
     }
 
     /**
+     * @param tagCatalog        the tags this operation's picker may offer, and where a tag typed
+     *                          inline is declared
      * @param catalog           the schemes a security override may point at
      * @param onRemoveOperation asked to remove this operation; the pane only reports the request
      */
     public static Node build(Operation operation, Supplier<List<String>> schemaNames,
-                             SecuritySchemeCatalog catalog, Runnable onRemoveOperation) {
+                             TagCatalog tagCatalog, SecuritySchemeCatalog catalog, Runnable onRemoveOperation) {
         GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
         FormFields.textRow(grid, row++, "Summary", operation::getSummary, operation::setSummary);
-        FormFields.textAreaRow(grid, row++, "Description", operation::getDescription, operation::setDescription);
-        FormFields.textRow(grid, row,
-                "Tags (comma separated)",
-                () -> String.join(", ", operation.getTags()),
-                value -> operation.setTags(value == null || value.isBlank()
-                        ? List.of()
-                        : List.of(value.split("\\s*,\\s*"))));
+        FormFields.textAreaRow(grid, row, "Description", operation::getDescription, operation::setDescription);
+
+        VBox tagsBox = new VBox(8);
+        buildTags(operation, tagsBox, tagCatalog);
 
         VBox parametersBox = new VBox(8);
         refreshParameters(operation, parametersBox);
@@ -79,6 +79,7 @@ public final class OperationPane {
         return FormFields.root(
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
+                FormFields.heading("Tags"), tagsBox,
                 FormFields.heading("Parameters"), parametersBox, addParameterButton,
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
@@ -142,6 +143,93 @@ public final class OperationPane {
             }
         });
         return radio;
+    }
+
+    /**
+     * The tag picker: one checkbox per tag the document defines, plus one per tag the operation
+     * already uses that is not defined — shown checked and marked undefined rather than hidden, so
+     * the form never disagrees with a loaded file. A tag typed into the field at the bottom is
+     * declared at the root and added to the operation in the same action, so tagging stays one step.
+     *
+     * <p>Toggling rebuilds this box rather than patching it in place: unlike {@link #buildSecurity},
+     * where the field being edited would fight a rebuild, a checkbox has no caret to lose, and
+     * rebuilding is what makes a newly-undefined checkbox disappear again once it is unticked.
+     */
+    private static void buildTags(Operation operation, VBox box, TagCatalog tagCatalog) {
+        box.getChildren().clear();
+
+        List<String> defined = tagCatalog.tagNames();
+        List<String> current = operation.getTags();
+
+        VBox checkBoxes = new VBox(4);
+        checkBoxes.setId("operation-tags");
+        for (String name : defined) {
+            checkBoxes.getChildren().add(
+                    tagCheckBox(operation, box, tagCatalog, name, current.contains(name), false));
+        }
+        for (String name : current) {
+            if (!defined.contains(name)) {
+                checkBoxes.getChildren().add(tagCheckBox(operation, box, tagCatalog, name, true, true));
+            }
+        }
+        if (checkBoxes.getChildren().isEmpty()) {
+            Label empty = new Label("No tags defined yet.");
+            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            checkBoxes.getChildren().add(empty);
+        }
+
+        TextField newTagField = new TextField();
+        newTagField.setId("operation-new-tag-name");
+        newTagField.setPromptText("New tag");
+        Runnable addNewTag = () -> {
+            String name = newTagField.getText();
+            if (name == null || name.isBlank()) {
+                return;
+            }
+            String trimmed = name.strip();
+            tagCatalog.ensureDeclared(trimmed);
+            List<String> tags = new ArrayList<>(operation.getTags());
+            if (!tags.contains(trimmed)) {
+                tags.add(trimmed);
+                operation.setTags(tags);
+            }
+            newTagField.clear();
+            buildTags(operation, box, tagCatalog);
+        };
+        newTagField.setOnAction(e -> addNewTag.run());
+        Button addTagButton = new Button("Add tag");
+        addTagButton.setId("operation-add-tag");
+        addTagButton.getStyleClass().add(Styles.ACCENT);
+        addTagButton.setOnAction(e -> addNewTag.run());
+
+        box.getChildren().addAll(checkBoxes, new HBox(8, newTagField, addTagButton));
+    }
+
+    /**
+     * No id: a tag name routinely appears nowhere else to key off, but the same gotcha that rules
+     * out an id built from an OAuth scope name applies here too, so the checkbox's own label is
+     * what tests look up by.
+     */
+    private static CheckBox tagCheckBox(Operation operation, VBox box, TagCatalog tagCatalog,
+                                        String name, boolean selected, boolean undefined) {
+        CheckBox checkBox = new CheckBox(undefined ? name + " (undefined)" : name);
+        checkBox.setSelected(selected);
+        if (undefined) {
+            checkBox.getStyleClass().add(Styles.WARNING);
+        }
+        checkBox.selectedProperty().addListener((obs, was, now) -> {
+            List<String> tags = new ArrayList<>(operation.getTags());
+            if (now) {
+                if (!tags.contains(name)) {
+                    tags.add(name);
+                }
+            } else {
+                tags.remove(name);
+            }
+            operation.setTags(tags);
+            buildTags(operation, box, tagCatalog);
+        });
+        return checkBox;
     }
 
     private static void refreshParameters(Operation operation, VBox box) {

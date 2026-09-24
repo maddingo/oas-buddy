@@ -7,6 +7,7 @@ import no.maddin.oasbuddy.core.model.Info;
 import no.maddin.oasbuddy.core.model.Paths;
 import no.maddin.oasbuddy.core.model.SecurityRequirements;
 import no.maddin.oasbuddy.core.model.Server;
+import no.maddin.oasbuddy.core.model.Tags;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,6 +91,11 @@ public final class OasDocument {
 
     public Paths getPaths() {
         return new Paths(JsonNodes.objectChild(root, "paths"));
+    }
+
+    /** The root {@code tags} array: the tags this document defines. See {@link Tags}. */
+    public Tags getTags() {
+        return new Tags(root);
     }
 
     /**

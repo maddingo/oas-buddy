@@ -2,8 +2,10 @@ package no.maddin.oasbuddy.desktop;
 
 import no.maddin.oasbuddy.core.model.HttpMethod;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.ApplicationTest;
@@ -32,6 +34,7 @@ class MainAppRemovalTest extends ApplicationTest {
         app.getDocument().getComponents().getSchemas().addSchema("Pet").setType("object");
         app.getDocument().getComponents().getSecuritySchemes().addScheme("ApiKeyAuth").setType("apiKey");
         app.getDocument().getComponents().getSecuritySchemes().addScheme("OAuth2Auth").setType("oauth2");
+        app.getDocument().getTags().add("pets");
         interact(() -> {
             app.refreshOutline();
         });
@@ -66,6 +69,34 @@ class MainAppRemovalTest extends ApplicationTest {
 
         assertFalse(app.getDocument().getComponents().getSchemas().names().contains("Pet"));
         assertTrue(lookup("#schemas-list").tryQuery().isPresent(), "should land on the schema list");
+    }
+
+    @Test
+    void removingATagLeavesTheEditorOnTheTagList() {
+        selectOutline("Tags");
+
+        interact(() -> removeButtonInRowOf(lookup("#tags-list").queryAs(GridPane.class), "pets").fire());
+
+        assertFalse(app.getDocument().getTags().names().contains("pets"));
+        assertTrue(lookup("#tags-list").tryQuery().isPresent(), "should still be on the tag list");
+    }
+
+    /**
+     * {@code pane.GridPanes} is package-private to the pane tests, so this outline-level test finds
+     * the row's own remove button the same way, without depending on that helper.
+     */
+    private static Button removeButtonInRowOf(GridPane grid, String entry) {
+        int targetRow = grid.getChildren().stream()
+                .filter(cell -> cell instanceof Label label && entry.equals(label.getText()))
+                .mapToInt(cell -> GridPane.getRowIndex(cell) == null ? 0 : GridPane.getRowIndex(cell))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no row for " + entry));
+        return grid.getChildren().stream()
+                .filter(cell -> cell instanceof Button
+                        && (GridPane.getRowIndex(cell) == null ? 0 : GridPane.getRowIndex(cell)) == targetRow)
+                .map(Button.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no button for " + entry));
     }
 
     @Test

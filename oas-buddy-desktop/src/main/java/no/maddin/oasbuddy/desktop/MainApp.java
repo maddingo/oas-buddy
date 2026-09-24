@@ -9,6 +9,7 @@ import no.maddin.oasbuddy.core.model.Operation;
 import no.maddin.oasbuddy.core.model.PathItem;
 import no.maddin.oasbuddy.core.validation.OasValidator;
 import no.maddin.oasbuddy.core.validation.ValidationMessage;
+import no.maddin.oasbuddy.core.validation.ValidationSeverity;
 import no.maddin.oasbuddy.desktop.pane.AboutDialog;
 import no.maddin.oasbuddy.desktop.pane.InfoPane;
 import no.maddin.oasbuddy.desktop.pane.OperationPane;
@@ -27,6 +28,9 @@ import no.maddin.oasbuddy.desktop.pane.SecuritySchemePane;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemeRemoval;
 import no.maddin.oasbuddy.desktop.pane.SecuritySchemesPane;
 import no.maddin.oasbuddy.desktop.pane.ServersPane;
+import no.maddin.oasbuddy.desktop.pane.TagCatalog;
+import no.maddin.oasbuddy.desktop.pane.TagRemoval;
+import no.maddin.oasbuddy.desktop.pane.TagsPane;
 import atlantafx.base.theme.PrimerDark;
 import atlantafx.base.theme.PrimerLight;
 import atlantafx.base.theme.Styles;
@@ -259,13 +263,20 @@ public class MainApp extends Application {
         }
     }
 
+    /**
+     * Both severities are shown, prefixed so they stay tellable apart at a glance; the fallback
+     * text only appears when there are neither errors nor warnings, so it stays accurate now that a
+     * warning-only document also gets messages here.
+     */
     private void runValidation() {
         var result = validator.validate(document);
-        if (result.isValid()) {
-            validationList.getItems().setAll(List.of("No validation errors."));
-        } else {
-            validationList.getItems().setAll(result.messages().stream().map(ValidationMessage::message).toList());
-        }
+        List<String> messages = result.messages().stream().map(MainApp::describe).toList();
+        validationList.getItems().setAll(messages.isEmpty() ? List.of("No validation errors.") : messages);
+    }
+
+    private static String describe(ValidationMessage message) {
+        String prefix = message.severity() == ValidationSeverity.WARNING ? "Warning: " : "Error: ";
+        return prefix + message.message();
     }
 
     private void showPane(Node pane) {
@@ -281,6 +292,8 @@ public class MainApp extends Application {
                 new OutlineNode("Info", () -> InfoPane.build(document.getInfo()))));
         root.getChildren().add(new TreeItem<>(
                 new OutlineNode("Servers", () -> ServersPane.build(document))));
+        root.getChildren().add(new TreeItem<>(new OutlineNode(
+                "Tags", () -> TagsPane.build(document, this::refreshOutline, this::removeTag))));
 
         TreeItem<OutlineNode> pathsItem = new TreeItem<>(new OutlineNode(
                 "Paths", () -> PathsPane.build(document, this::refreshOutline, this::removePath)));
@@ -296,7 +309,7 @@ public class MainApp extends Application {
                 Supplier<List<String>> schemaNames = () -> document.getComponents().getSchemas().names();
                 pathNode.getChildren().add(new TreeItem<>(new OutlineNode(method.name(),
                         () -> OperationPane.build(operation, schemaNames,
-                                SecuritySchemeCatalog.of(document),
+                                TagCatalog.of(document), SecuritySchemeCatalog.of(document),
                                 () -> removeOperation(path, method)))));
             }
             pathsItem.getChildren().add(pathNode);
@@ -333,6 +346,11 @@ public class MainApp extends Application {
     private void removeSchema(String schemaName) {
         SchemaRemoval.remove(document, schemaName, confirmation,
                 () -> refreshAndSelect("Schemas"));
+    }
+
+    private void removeTag(String tagName) {
+        TagRemoval.remove(document, tagName, confirmation,
+                () -> refreshAndSelect("Tags"));
     }
 
     /** Selects the renamed schema afterwards, so the editor stays on what the user was editing. */
