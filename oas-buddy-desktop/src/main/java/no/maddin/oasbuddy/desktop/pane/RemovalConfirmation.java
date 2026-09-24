@@ -7,32 +7,46 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 
 /**
- * Asked before anything is removed from the document, so a removal can be confirmed without the
- * caller depending on a modal window: tests pass their own answer instead.
+ * Asked before anything is removed or renamed in the document, so the action can be confirmed
+ * without the caller depending on a modal window: tests pass their own answer instead. The same
+ * seam serves both, since "ask, show what is at stake, go ahead only on an explicit yes" is
+ * identical either way — only the affirmative button's label differs ("Remove" vs. "Rename"),
+ * which {@link #dialog(String)} takes as a parameter rather than this interface growing a second
+ * method.
  */
 @FunctionalInterface
 public interface RemovalConfirmation {
 
     /**
      * @param question headline, e.g. {@code Remove path "/pets"?}
-     * @param details  what the removal takes with it or breaks; may be empty
+     * @param details  what the action takes with it or breaks; may be empty
      * @return whether to go ahead
      */
     boolean confirm(String question, String details);
 
-    /** The confirmation used by the running app. */
+    /** The confirmation used by the running app for a removal; its button reads "Remove". */
     static RemovalConfirmation dialog() {
+        return dialog("Remove");
+    }
+
+    /** The same confirmation, with a different affirmative label, e.g. "Rename" for a rename. */
+    static RemovalConfirmation dialog(String actionLabel) {
         return (question, details) -> {
-            Alert alert = alert(question, details);
-            ButtonType remove = alert.getButtonTypes().get(0);
-            return alert.showAndWait().filter(remove::equals).isPresent();
+            Alert alert = alert(actionLabel, question, details);
+            ButtonType action = alert.getButtonTypes().get(0);
+            return alert.showAndWait().filter(action::equals).isPresent();
         };
     }
 
     /** The dialog itself, built separately from showing it so it can be inspected. */
     static Alert alert(String question, String details) {
-        ButtonType remove = new ButtonType("Remove", ButtonBar.ButtonData.OK_DONE);
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", remove, ButtonType.CANCEL);
+        return alert("Remove", question, details);
+    }
+
+    /** As {@link #alert(String, String)}, with the affirmative button labelled {@code actionLabel}. */
+    static Alert alert(String actionLabel, String question, String details) {
+        ButtonType action = new ButtonType(actionLabel, ButtonBar.ButtonData.OK_DONE);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", action, ButtonType.CANCEL);
         alert.setTitle("OAS Buddy");
         alert.setHeaderText(question);
 

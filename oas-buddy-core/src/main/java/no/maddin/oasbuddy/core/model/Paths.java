@@ -36,4 +36,15 @@ public final class Paths {
     public void removePath(String path) {
         node.remove(path);
     }
+
+    /**
+     * Renames a path, keeping its position in the document. Nothing can {@code $ref} a path, so
+     * unlike a schema rename there is nothing else in the document to fix up.
+     *
+     * @return {@code false}, changing nothing, if {@code from} does not exist or {@code to} is
+     *         already taken (a collision is refused, never silently overwritten)
+     */
+    public boolean renamePath(String from, String to) {
+        return JsonNodes.renameField(node, from, to);
+    }
 }

@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -60,12 +61,24 @@ public final class SchemaPane {
     }
 
     /**
+     * @param onRenameSchema asked to rename this schema to a new, not-yet-used name; returns
+     *                       whether the rename went ahead (declined by its own confirmation, or a
+     *                       collision, both leave the document untouched). The pane only reports
+     *                       the request, it never renames anything itself.
      * @param onRemoveSchema asked to remove this schema; the pane only reports the request, it
      *                       never removes anything itself
      */
-    public static Node build(OasDocument document, String schemaName, Consumer<String> onRemoveSchema) {
+    public static Node build(OasDocument document, String schemaName,
+                             BiFunction<String, String, Boolean> onRenameSchema,
+                             Consumer<String> onRemoveSchema) {
         Schema schema = document.getComponents().getSchemas().getSchema(schemaName);
         List<String> schemaNames = document.getComponents().getSchemas().names();
+
+        TextField nameField = FormFields.renameField(schemaName, candidate ->
+                schemaNames.contains(candidate)
+                        ? "A schema named \"" + candidate + "\" already exists."
+                        : onRenameSchema.apply(schemaName, candidate) ? null : "");
+        nameField.setId("schema-name");
 
         GridPane grid = FormFields.grid();
         int row = 0;
@@ -134,7 +147,7 @@ public final class SchemaPane {
         });
 
         return FormFields.root(
-                FormFields.headerWithDelete("Schema", "delete-schema", "Delete schema",
+                FormFields.headerWithRenameAndDelete("Schema", nameField, "delete-schema", "Delete schema",
                         () -> onRemoveSchema.accept(schemaName)), grid,
                 FormFields.heading("Values"), values,
                 FormFields.heading("Constraints"), constraints.node(),
@@ -258,7 +271,18 @@ public final class SchemaPane {
                     refresh();
                 }
             });
-            grid.add(new Label(name), 0, row);
+            TextField nameField = FormFields.renameField(name, candidate -> {
+                if (schema.propertyNames().contains(candidate)) {
+                    return "A property named \"" + candidate + "\" already exists.";
+                }
+                schema.renameProperty(name, candidate);
+                if (expanded.remove(name)) {
+                    expanded.add(candidate);
+                }
+                refresh();
+                return null;
+            });
+            grid.add(nameField, 0, row);
             grid.add(typeBox, 1, row);
 
             if (choice != null && choice.isArray()) {

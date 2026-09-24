@@ -6,7 +6,6 @@ import no.maddin.oasbuddy.core.document.JsonNodes;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /** One flow of an oauth2 scheme: its URLs and its scope map. */
 public final class OAuthFlow {
@@ -55,26 +54,14 @@ public final class OAuthFlow {
     }
 
     /**
-     * Renames a scope without moving it.
-     *
-     * <p>Jackson cannot rename a field, and remove-then-add would push the scope to the end of the
-     * map, so every rename would reorder the saved file — the ordered tree exists precisely so that
-     * does not happen. The map is therefore rebuilt in place. A no-op if {@code from} is not
-     * declared or {@code to} already is.
+     * Renames a scope without moving it or losing its description. A no-op if {@code from} is not
+     * declared or {@code to} already is; see {@link JsonNodes#renameField} for why this needs its
+     * own helper rather than Jackson's remove-then-add.
      */
     public void renameScope(String from, String to) {
-        if (!(node.get(SCOPES_FIELD) instanceof ObjectNode scopes)
-                || !scopes.has(from) || scopes.has(to) || from.equals(to)) {
-            return;
+        if (node.get(SCOPES_FIELD) instanceof ObjectNode scopes) {
+            JsonNodes.renameField(scopes, from, to);
         }
-        List<Map.Entry<String, String>> renamed = new ArrayList<>();
-        Iterator<String> it = scopes.fieldNames();
-        while (it.hasNext()) {
-            String name = it.next();
-            renamed.add(Map.entry(name.equals(from) ? to : name, scopes.get(name).asText()));
-        }
-        scopes.removeAll();
-        renamed.forEach(entry -> scopes.put(entry.getKey(), entry.getValue()));
     }
 
     /** Whether the flow holds anything, i.e. whether discarding it would lose something. */

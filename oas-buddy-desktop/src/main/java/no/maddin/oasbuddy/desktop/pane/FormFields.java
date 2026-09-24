@@ -10,6 +10,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -18,6 +19,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 final class FormFields {
@@ -57,6 +59,12 @@ final class FormFields {
 
     /** A pane title with the control that deletes what the pane is editing. */
     static Node headerWithDelete(String title, String buttonId, String buttonText, Runnable onDelete) {
+        return headerWithRenameAndDelete(title, null, buttonId, buttonText, onDelete);
+    }
+
+    /** As {@link #headerWithDelete}, with a rename control between the title and the delete button. */
+    static Node headerWithRenameAndDelete(String title, Node renameField, String buttonId, String buttonText,
+                                          Runnable onDelete) {
         Button deleteButton = new Button(buttonText);
         deleteButton.setId(buttonId);
         deleteButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
@@ -65,7 +73,9 @@ final class FormFields {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox header = new HBox(8, heading(title), spacer, deleteButton);
+        HBox header = renameField == null
+                ? new HBox(8, heading(title), spacer, deleteButton)
+                : new HBox(8, heading(title), renameField, spacer, deleteButton);
         header.setAlignment(Pos.CENTER_LEFT);
         return header;
     }
@@ -100,6 +110,44 @@ final class FormFields {
         box.selectedProperty().addListener((obs, oldVal, newVal) -> setter.accept(newVal));
         grid.addRow(row, new Label(label), box);
         return box;
+    }
+
+    /**
+     * A text field for renaming something, committing on Enter or focus loss rather than per
+     * keystroke — the same reason {@code OAuthFlow.renameScope} commits a scope rename as a whole
+     * rather than rebuilding the underlying map on every character, which would fight the caret.
+     *
+     * <p>{@code attempt} performs the rename and returns {@code null} on success. Any other value
+     * reverts the field to {@code initialName}; a non-blank value is also shown as an error, the
+     * same red-field-plus-tooltip treatment {@code SchemaConstraints} uses for an invalid value.
+     * A blank value reverts quietly — for a rename declined through its own confirmation dialog,
+     * which already explained itself.
+     */
+    static TextField renameField(String initialName, Function<String, String> attempt) {
+        TextField field = new TextField(initialName);
+        Runnable commit = () -> {
+            String candidate = field.getText() == null ? "" : field.getText().strip();
+            if (candidate.equals(initialName)) {
+                field.setText(initialName);
+                return;
+            }
+            String error = candidate.isEmpty() ? "Name cannot be blank." : attempt.apply(candidate);
+            if (error == null) {
+                field.pseudoClassStateChanged(Styles.STATE_DANGER, false);
+                field.setTooltip(null);
+            } else {
+                field.setText(initialName);
+                field.pseudoClassStateChanged(Styles.STATE_DANGER, !error.isBlank());
+                field.setTooltip(error.isBlank() ? null : new Tooltip(error));
+            }
+        };
+        field.setOnAction(e -> commit.run());
+        field.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+            if (!isFocused) {
+                commit.run();
+            }
+        });
+        return field;
     }
 
     private static String nullToEmpty(String value) {
