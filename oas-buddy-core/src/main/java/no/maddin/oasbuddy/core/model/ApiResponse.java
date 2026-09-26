@@ -56,19 +56,19 @@ public final class ApiResponse {
         return node.size() == 1 && node.has(DESCRIPTION) && (description == null || description.isBlank());
     }
 
+    /** The media types this response carries. */
+    public Content getContent() {
+        return new Content(node);
+    }
+
     /** The schema for {@code mediaType}, creating it and any missing parent. */
     public Schema getSchema(String mediaType) {
-        ObjectNode content = JsonNodes.objectChild(node, "content");
-        ObjectNode mediaTypeNode = JsonNodes.objectChild(content, mediaType);
-        return new Schema(JsonNodes.objectChild(mediaTypeNode, "schema"));
+        return getContent().add(mediaType).getSchema();
     }
 
     /** The schema for {@code mediaType} if it is there, otherwise {@code null}. Reads only. */
     public Schema findSchema(String mediaType) {
-        return node.get("content") instanceof ObjectNode content
-                && content.get(mediaType) instanceof ObjectNode mediaTypeNode
-                && mediaTypeNode.get("schema") instanceof ObjectNode schemaNode
-                ? new Schema(schemaNode)
-                : null;
+        MediaType existing = getContent().get(mediaType);
+        return existing == null ? null : existing.findSchema();
     }
 }

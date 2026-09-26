@@ -54,7 +54,7 @@ public final class OperationPane {
                 "operation-parameters");
 
         VBox requestBodyBox = new VBox(8);
-        buildRequestBody(operation, requestBodyBox, schemaNames);
+        buildRequestBody(operation, requestBodyBox, schemaNames, components, confirmation);
 
         VBox responsesBox = new VBox(8);
         responsesBox.setId("operation-responses");
@@ -231,14 +231,21 @@ public final class OperationPane {
         return checkBox;
     }
 
-    private static void buildRequestBody(Operation operation, VBox box, Supplier<List<String>> schemaNames) {
+    /**
+     * A new request body starts with {@code application/json}: {@code content} is required of a
+     * request body, and JSON is what almost every API sends. It can be renamed or removed like any
+     * other media type.
+     */
+    private static void buildRequestBody(Operation operation, VBox box, Supplier<List<String>> schemaNames,
+                                         ComponentCatalog components, RemovalConfirmation confirmation) {
         RequestBody existing = operation.getRequestBody();
         if (existing == null) {
             Button addButton = new Button("Add request body");
+            addButton.setId("add-request-body");
             addButton.getStyleClass().add(Styles.ACCENT);
             addButton.setOnAction(e -> {
-                operation.addRequestBody();
-                buildRequestBody(operation, box, schemaNames);
+                operation.addRequestBody().getContent().add("application/json");
+                buildRequestBody(operation, box, schemaNames, components, confirmation);
             });
             box.getChildren().setAll(addButton);
             return;
@@ -251,19 +258,14 @@ public final class OperationPane {
         TextField descriptionField = new TextField(nullToEmpty(existing.getDescription()));
         descriptionField.textProperty().addListener((obs, oldVal, newVal) -> existing.setDescription(newVal));
 
-        ComboBox<String> schemaBox = new ComboBox<>();
-        schemaBox.getItems().addAll(schemaNames.get());
-        schemaBox.setValue(refToSchemaName(existing.getSchema("application/json").getRef()));
-        schemaBox.valueProperty().addListener((obs, oldVal, newVal) ->
-                existing.getSchema("application/json").setRef(newVal == null ? null : "#/components/schemas/" + newVal));
-
         HBox row = new HBox(8,
                 requiredBox,
-                new Label("Description"), descriptionField,
-                new Label("Schema (application/json)"), schemaBox);
+                new Label("Description"), descriptionField);
         row.setAlignment(Pos.CENTER_LEFT);
-        row.getStyleClass().add(Styles.BORDERED);
-        box.getChildren().setAll(row);
+
+        VBox content = ContentEditor.build(existing.getContent(), schemaNames, components, confirmation);
+        content.getStyleClass().add("request-body-content");
+        box.getChildren().setAll(row, content);
     }
 
     /**
@@ -285,6 +287,10 @@ public final class OperationPane {
 
             HBox row = new HBox(8, new Label(statusCode));
             row.getStyleClass().add("operation-response");
+            row.setAlignment(Pos.CENTER_LEFT);
+            VBox card = new VBox(8, row);
+            card.getStyleClass().add(Styles.BORDERED);
+            card.setStyle("-fx-padding: 8;");
 
             if (response.isReference() && response.getReferencedResponseName() == null) {
                 // a reference this editor cannot follow (another file, another section): shown, not edited
@@ -295,9 +301,9 @@ public final class OperationPane {
                 row.getChildren().add(sourcePicker(responses, statusCode, response, responseCatalog,
                         confirmation, refresh));
                 if (!response.isReference()) {
-                    row.getChildren().addAll(
-                            new Label("Description"), ResponseForm.descriptionField(response),
-                            new Label("Schema"), ResponseForm.schemaPicker(response, schemaNames));
+                    row.getChildren().addAll(new Label("Description"), ResponseForm.descriptionField(response));
+                    card.getChildren().add(
+                            ContentEditor.build(response.getContent(), schemaNames, responseCatalog, confirmation));
                 }
             }
 
@@ -308,9 +314,7 @@ public final class OperationPane {
                 refresh.run();
             });
             row.getChildren().add(removeButton);
-            row.setAlignment(Pos.CENTER_LEFT);
-            row.getStyleClass().add(Styles.BORDERED);
-            box.getChildren().add(row);
+            box.getChildren().add(card);
         }
     }
 
@@ -351,14 +355,6 @@ public final class OperationPane {
             refresh.run();
         });
         return picker;
-    }
-
-    private static String refToSchemaName(String ref) {
-        if (ref == null) {
-            return null;
-        }
-        int idx = ref.lastIndexOf('/');
-        return idx >= 0 ? ref.substring(idx + 1) : ref;
     }
 
     private static String nullToEmpty(String value) {

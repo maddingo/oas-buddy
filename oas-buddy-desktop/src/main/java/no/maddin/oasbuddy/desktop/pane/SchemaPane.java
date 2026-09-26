@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 
 public final class SchemaPane {
 
-    private static final List<String> TYPES = List.of("object", "array", "string", "integer", "number", "boolean");
+    static final List<String> TYPES = List.of("object", "array", "string", "integer", "number", "boolean");
     /** What an array's elements or an object's additional properties can be, besides a reference. */
     private static final List<String> ELEMENT_TYPES = List.of("string", "integer", "number", "boolean");
     private static final double TYPE_COLUMN_WIDTH = 140;

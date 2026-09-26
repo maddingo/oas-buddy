@@ -2,12 +2,13 @@ package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.ApiResponse;
+import no.maddin.oasbuddy.core.model.Example;
 import no.maddin.oasbuddy.core.model.Parameter;
 
 import java.util.List;
 
 /**
- * What an operation or path may refer to instead of defining inline: the responses and parameters
+ * What may be referred to instead of defined inline: the responses, parameters and examples
  * declared under {@code components}. One interface for every kind, rather than one per kind, so
  * {@link OperationPane} does not grow a parameter each time another kind becomes referable; an
  * interface rather than the document for the same reason as {@link SecuritySchemeCatalog} — the
@@ -26,6 +27,12 @@ public interface ComponentCatalog {
 
     /** The declared parameter, or {@code null} if there is none under that key. */
     Parameter parameter(String name);
+
+    /** The declared example names, in document order. */
+    List<String> exampleNames();
+
+    /** The declared example, or {@code null} if there is none by that name. */
+    Example example(String name);
 
     /** Reads straight off the document, so the catalog is never stale. */
     static ComponentCatalog of(OasDocument document) {
@@ -48,6 +55,16 @@ public interface ComponentCatalog {
             @Override
             public Parameter parameter(String name) {
                 return document.getComponents().getParameters().getParameter(name);
+            }
+
+            @Override
+            public List<String> exampleNames() {
+                return document.getComponents().getExamples().names();
+            }
+
+            @Override
+            public Example example(String name) {
+                return document.getComponents().getExamples().getExample(name);
             }
         };
     }

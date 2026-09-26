@@ -22,7 +22,62 @@
         ],
         "responses": {
           "200": {
-            "description": "The pets"
+            "description": "The pets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pet"
+                  }
+                },
+                "examples": {
+                  "cat": {
+                    "$ref": "#/components/examples/Cat"
+                  },
+                  "dog": {
+                    "summary": "A dog",
+                    "value": [
+                      {
+                        "name": "Rex"
+                      }
+                    ]
+                  }
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<pets/>"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pet"
+              },
+              "example": {
+                "name": "Tom"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Pet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
           }
         }
       }
@@ -99,6 +154,16 @@
         "schema": {
           "type": "integer"
         }
+      }
+    },
+    "examples": {
+      "Cat": {
+        "summary": "A cat",
+        "value": [
+          {
+            "name": "Tom"
+          }
+        ]
       }
     },
     "responses": {
