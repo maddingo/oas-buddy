@@ -73,6 +73,22 @@ class PathRemovalTest {
         assertEquals(List.of("It has no operations."), asked);
     }
 
+    /** A hand-edited {@code /odd: ~} is still a path the user must be able to get rid of. */
+    @Test
+    void aPathThatIsNotAnObjectCanStillBeRemoved() {
+        OasDocument document = petstore();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) document.getRoot().get("paths")).putNull("/odd");
+        List<String> asked = new ArrayList<>();
+
+        PathRemoval.removePath(document, "/odd", (question, details) -> {
+            asked.add(question + " | " + details);
+            return true;
+        }, () -> { });
+
+        assertEquals(List.of("Remove path \"/odd\"? | It has no operations."), asked);
+        assertFalse(document.getPaths().pathNames().contains("/odd"));
+    }
+
     @Test
     void removesOnlyTheChosenOperation() {
         OasDocument document = petstore();

@@ -52,6 +52,15 @@ class TagUsagesTest {
         assertEquals(List.of("POST /pets"), TagUsages.find(load(), "store"));
     }
 
+    /** A hand-edited {@code /odd: ~} has no operations, so it cannot use a tag — and must not throw. */
+    @Test
+    void aPathThatIsNotAnObjectIsSkipped() {
+        OasDocument document = load();
+        ((com.fasterxml.jackson.databind.node.ObjectNode) document.getRoot().get("paths")).putNull("/odd");
+
+        assertEquals(List.of("GET /pets", "POST /pets"), TagUsages.find(document, "pets"));
+    }
+
     @Test
     void aTagNothingUsesHasNoUsages() {
         assertEquals(List.of(), TagUsages.find(load(), "unused"));

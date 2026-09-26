@@ -20,6 +20,11 @@ public final class ParameterPane {
      */
     public static Node build(OasDocument document, String key, Consumer<String> onRemoveParameter) {
         Parameter parameter = document.getComponents().getParameters().getParameter(key);
+        Node header = FormFields.headerWithDelete("Parameter: " + key, "delete-parameter", "Delete parameter",
+                () -> onRemoveParameter.accept(key));
+        if (parameter == null) {
+            return FormFields.root(header, FormFields.notEditable(key, "a parameter"));
+        }
 
         GridPane grid = FormFields.grid();
         int row = 0;
@@ -29,9 +34,6 @@ public final class ParameterPane {
         grid.addRow(row++, new Label("Type"), ParameterForm.typeField(parameter));
         FormFields.textAreaRow(grid, row, "Description", parameter::getDescription, parameter::setDescription);
 
-        return FormFields.root(
-                FormFields.headerWithDelete("Parameter: " + key, "delete-parameter", "Delete parameter",
-                        () -> onRemoveParameter.accept(key)),
-                grid);
+        return FormFields.root(header, grid);
     }
 }

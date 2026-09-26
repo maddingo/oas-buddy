@@ -25,16 +25,18 @@ public final class ResponsePane {
     public static Node build(OasDocument document, String responseName, Supplier<List<String>> schemaNames,
                              RemovalConfirmation confirmation, Consumer<String> onRemoveResponse) {
         ApiResponse response = document.getComponents().getResponses().getResponse(responseName);
+        Node header = FormFields.headerWithDelete("Response: " + responseName, "delete-response", "Delete response",
+                () -> onRemoveResponse.accept(responseName));
+        if (response == null) {
+            return FormFields.root(header, FormFields.notEditable(responseName, "a response"));
+        }
 
         GridPane grid = FormFields.grid();
         TextField description = ResponseForm.descriptionField(response);
         description.setId("response-description");
         grid.addRow(0, new Label("Description"), description);
 
-        return FormFields.root(
-                FormFields.headerWithDelete("Response: " + responseName, "delete-response", "Delete response",
-                        () -> onRemoveResponse.accept(responseName)),
-                grid,
+        return FormFields.root(header, grid,
                 FormFields.heading("Content"),
                 ContentEditor.build(response.getContent(), schemaNames, ComponentCatalog.of(document), confirmation));
     }

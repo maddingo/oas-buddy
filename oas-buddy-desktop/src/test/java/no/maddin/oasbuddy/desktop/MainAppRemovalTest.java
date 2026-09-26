@@ -172,6 +172,24 @@ class MainAppRemovalTest extends ApplicationTest {
         assertTrue(lookup("#examples-list").tryQuery().isPresent(), "should land on the example list");
     }
 
+    /**
+     * A hand-edited {@code /odd: ~} once crashed the whole outline, which reads each path's
+     * operations while it builds. It must show as a path with no operations, and be removable.
+     */
+    @Test
+    void aPathThatIsNotAnObjectStillShowsInTheOutlineAndCanBeRemoved() {
+        interact(() -> {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) app.getDocument().getRoot().get("paths")).putNull("/odd");
+            app.refreshOutline();
+        });
+        assertTrue(outlineChildren("Paths").contains("/odd"));
+
+        selectOutline("Paths", "/odd");
+        interact(() -> deleteButton("#delete-path").fire());
+
+        assertFalse(app.getDocument().getPaths().pathNames().contains("/odd"));
+    }
+
     @SuppressWarnings("unchecked")
     private List<String> outlineChildren(String label) {
         TreeView<Object> outline = lookup(".tree-view").query();

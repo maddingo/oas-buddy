@@ -77,8 +77,13 @@ public final class SecuritySchemesPane {
         for (String name : names) {
             SecurityScheme scheme = schemes.getScheme(name);
 
-            Label type = new Label(scheme.getType() == null ? "" : scheme.getType());
-            if (!scheme.isEditable()) {
+            Label type;
+            if (scheme == null) {
+                type = FormFields.notAnObject();
+            } else {
+                type = new Label(scheme.getType() == null ? "" : scheme.getType());
+            }
+            if (scheme != null && !scheme.isEditable()) {
                 // the editor has no form for this type; say so here rather than only on the pane
                 type.getStyleClass().add(Styles.TEXT_MUTED);
             }

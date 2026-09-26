@@ -281,9 +281,6 @@ public final class OperationPane {
         Runnable refresh = () -> refreshResponses(operation, box, schemaNames, responseCatalog, confirmation);
         for (String statusCode : responses.statusCodes()) {
             ApiResponse response = responses.getResponse(statusCode);
-            if (response == null) {
-                continue;
-            }
 
             HBox row = new HBox(8, new Label(statusCode));
             row.getStyleClass().add("operation-response");
@@ -292,7 +289,12 @@ public final class OperationPane {
             card.getStyleClass().add(Styles.BORDERED);
             card.setStyle("-fx-padding: 8;");
 
-            if (response.isReference() && response.getReferencedResponseName() == null) {
+            if (response == null) {
+                // not an object at all: shown so the form agrees with the file, removable, not edited
+                Label note = new Label("Not a response object; left exactly as it was loaded.");
+                note.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.WARNING);
+                row.getChildren().add(note);
+            } else if (response.isReference() && response.getReferencedResponseName() == null) {
                 // a reference this editor cannot follow (another file, another section): shown, not edited
                 Label ref = new Label("$ref: " + response.getRef());
                 ref.getStyleClass().add(Styles.TEXT_MUTED);

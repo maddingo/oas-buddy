@@ -188,6 +188,19 @@ class SecuritySchemeTest {
         assertEquals(List.of("read:pets", "write:pets", "admin"), scheme.declaredScopes());
     }
 
+    /** A hand-edited {@code implicit: ~} lists as a flow but is no object; it defines no scopes. */
+    @Test
+    void aFlowThatIsNotAnObjectContributesNoScopes() {
+        OasDocument document = OasDocument.newDocument(DocumentFormat.YAML);
+        SecurityScheme scheme = document.getComponents().getSecuritySchemes().addScheme("Auth");
+        scheme.setType("oauth2");
+        scheme.getFlows().addFlow("password").setScope("admin", "everything");
+        ((com.fasterxml.jackson.databind.node.ObjectNode) document.getRoot().at("/components/securitySchemes/Auth/flows"))
+                .putNull("implicit");
+
+        assertEquals(List.of("admin"), scheme.declaredScopes());
+    }
+
     @Test
     void aSchemeThatIsNotOauth2DeclaresNoScopes() {
         SecurityScheme scheme = newScheme();

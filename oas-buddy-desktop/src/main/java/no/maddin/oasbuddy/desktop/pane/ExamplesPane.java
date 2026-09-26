@@ -2,6 +2,7 @@ package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.ComponentExamples;
+import no.maddin.oasbuddy.core.model.Example;
 import atlantafx.base.theme.Styles;
 import javafx.geometry.HPos;
 import javafx.scene.Node;
@@ -72,9 +73,14 @@ public final class ExamplesPane {
 
         int row = 1;
         for (String name : names) {
-            String summary = examples.getExample(name).getSummary();
-            Label summaryLabel = new Label(summary == null ? "" : summary);
-            summaryLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            Example example = examples.getExample(name);
+            Label summaryLabel;
+            if (example == null) {
+                summaryLabel = FormFields.notAnObject();
+            } else {
+                summaryLabel = new Label(example.getSummary() == null ? "" : example.getSummary());
+                summaryLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);

@@ -25,6 +25,11 @@ public final class ExamplePane {
      */
     public static Node build(OasDocument document, String exampleName, Consumer<String> onRemoveExample) {
         Example example = document.getComponents().getExamples().getExample(exampleName);
+        Node header = FormFields.headerWithDelete("Example: " + exampleName, "delete-example", "Delete example",
+                () -> onRemoveExample.accept(exampleName));
+        if (example == null) {
+            return FormFields.root(header, FormFields.notEditable(exampleName, "an example"));
+        }
 
         GridPane grid = FormFields.grid();
         int row = 0;
@@ -40,9 +45,6 @@ public final class ExamplePane {
         external.setId("example-external-value");
         grid.addRow(row, new Label("External value"), external);
 
-        return FormFields.root(
-                FormFields.headerWithDelete("Example: " + exampleName, "delete-example", "Delete example",
-                        () -> onRemoveExample.accept(exampleName)),
-                grid);
+        return FormFields.root(header, grid);
     }
 }

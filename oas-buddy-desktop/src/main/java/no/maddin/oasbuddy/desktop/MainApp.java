@@ -319,7 +319,9 @@ public class MainApp extends Application {
             TreeItem<OutlineNode> pathNode = new TreeItem<>(new OutlineNode(path,
                     () -> PathItemPane.build(document, path, this::refreshOutline, this::renamePath,
                             replaceConfirmation, () -> removePath(path), method -> removeOperation(path, method))));
-            for (var entry : pathItem.getOperations().entrySet()) {
+            // a path whose value is not an object has no operations to list; its node still shows
+            var operations = pathItem == null ? java.util.Map.<HttpMethod, Operation>of() : pathItem.getOperations();
+            for (var entry : operations.entrySet()) {
                 HttpMethod method = entry.getKey();
                 Operation operation = entry.getValue();
                 Supplier<List<String>> schemaNames = () -> document.getComponents().getSchemas().names();

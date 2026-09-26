@@ -64,8 +64,8 @@ public final class TagsPane {
     }
 
     private static void fillList(Tags tags, GridPane list, Consumer<String> onRemoveTag) {
-        List<String> names = tags.names();
-        if (names.isEmpty()) {
+        List<Tag> all = tags.all();
+        if (all.isEmpty()) {
             Label empty = new Label("No tags yet.");
             empty.getStyleClass().add(Styles.TEXT_MUTED);
             list.add(empty, 0, 0, 3, 1);
@@ -75,8 +75,8 @@ public final class TagsPane {
         list.addRow(0, FormFields.columnHeading("Tag"), FormFields.columnHeading("Description"));
 
         int row = 1;
-        for (String name : names) {
-            Tag tag = tags.get(name);
+        for (Tag tag : all) {
+            String name = tag.getName();
 
             TextField descriptionField = new TextField(nullToEmpty(tag.getDescription()));
             descriptionField.setPromptText("Description");

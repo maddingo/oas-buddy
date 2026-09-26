@@ -79,6 +79,12 @@ public final class SchemaPane {
                         ? "A schema named \"" + candidate + "\" already exists."
                         : onRenameSchema.apply(schemaName, candidate) ? null : "");
         nameField.setId("schema-name");
+        if (schema == null) {
+            return FormFields.root(
+                    FormFields.headerWithRenameAndDelete("Schema", nameField, "delete-schema", "Delete schema",
+                            () -> onRemoveSchema.accept(schemaName)),
+                    FormFields.notEditable(schemaName, "a schema"));
+        }
 
         GridPane grid = FormFields.grid();
         int row = 0;

@@ -22,9 +22,11 @@ class TagsPaneTest extends ApplicationTest {
 
     private final List<String> removalRequests = new ArrayList<>();
     private OasDocument document;
+    private Stage stage;
 
     @Override
     public void start(Stage stage) {
+        this.stage = stage;
         document = OasDocument.newDocument(DocumentFormat.YAML);
         document.getTags().add("pets").setDescription("Everything about pets");
         document.getTags().add("store");
@@ -37,6 +39,28 @@ class TagsPaneTest extends ApplicationTest {
     @Test
     void listsOneRemovableRowPerTag() {
         assertEquals(List.of("pets", "store"), GridPanes.entries(list()));
+    }
+
+    /**
+     * With a duplicate name, each row must edit its own tag — looking tags up by name would point
+     * both rows at the first one.
+     */
+    @Test
+    void eachRowOfADuplicatedNameEditsItsOwnTag() {
+        OasDocument duplicated = OasDocument.newDocument(DocumentFormat.YAML);
+        var array = duplicated.getRoot().putArray("tags");
+        array.addObject().put("name", "pets").put("description", "first");
+        array.addObject().put("name", "pets").put("description", "second");
+        interact(() -> stage.getScene().setRoot(new StackPane(TagsPane.build(duplicated, () -> { }, name -> { }))));
+
+        List<TextField> descriptions = list().getChildren().stream()
+                .filter(cell -> GridPanes.column(cell) == 1 && cell instanceof TextField)
+                .map(TextField.class::cast)
+                .toList();
+        interact(() -> descriptions.get(1).setText("edited"));
+
+        assertEquals("first", array.get(0).get("description").asText(), "the first tag must be left alone");
+        assertEquals("edited", array.get(1).get("description").asText());
     }
 
     @Test

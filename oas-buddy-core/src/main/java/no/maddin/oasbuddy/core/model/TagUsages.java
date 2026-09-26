@@ -29,6 +29,10 @@ public final class TagUsages {
         Paths paths = document.getPaths();
         for (String path : paths.pathNames()) {
             PathItem pathItem = paths.getPathItem(path);
+            if (pathItem == null) {
+                // not an object: it has no operations, so nothing in it can use a tag
+                continue;
+            }
             for (var entry : pathItem.getOperations().entrySet()) {
                 if (entry.getValue().getTags().contains(tagName)) {
                     usages.add(entry.getKey().name() + " " + path);

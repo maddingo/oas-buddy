@@ -20,11 +20,13 @@ public final class PathRemoval {
 
     public static void removePath(OasDocument document, String path,
                                   RemovalConfirmation confirmation, Runnable onRemoved) {
-        PathItem pathItem = document.getPaths().getPathItem(path);
-        if (pathItem == null) {
+        if (!document.getPaths().pathNames().contains(path)) {
             return;
         }
-        if (!confirmation.confirm("Remove path \"" + path + "\"?", describeOperations(pathItem))) {
+        // a path whose value is not an object is still removable; it just takes no operations with it
+        PathItem pathItem = document.getPaths().getPathItem(path);
+        String details = pathItem == null ? "It has no operations." : describeOperations(pathItem);
+        if (!confirmation.confirm("Remove path \"" + path + "\"?", details)) {
             return;
         }
         document.getPaths().removePath(path);

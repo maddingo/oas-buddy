@@ -111,6 +111,9 @@ final class ContentEditor {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox header = new HBox(8, nameField, spacer, removeButton);
         header.setAlignment(Pos.CENTER_LEFT);
+        if (media == null) {
+            return notEditableSection(header);
+        }
 
         GridPane grid = FormFields.grid();
         grid.addRow(0, new Label("Schema"), schemaPicker(media, schemaNames));
@@ -118,6 +121,16 @@ final class ContentEditor {
         grid.addRow(2, new Label("Examples"), examples(media, catalog, confirmation, refresh));
 
         VBox section = new VBox(8, header, grid);
+        section.getStyleClass().addAll("media-type", Styles.BORDERED);
+        section.setStyle("-fx-padding: 8;");
+        return section;
+    }
+
+    /** A media type whose value is not an object: named and removable, otherwise left as loaded. */
+    private static Node notEditableSection(HBox header) {
+        Label note = new Label("Not a media type object; left exactly as it was loaded.");
+        note.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.WARNING);
+        VBox section = new VBox(8, header, note);
         section.getStyleClass().addAll("media-type", Styles.BORDERED);
         section.setStyle("-fx-padding: 8;");
         return section;
