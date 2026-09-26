@@ -19,7 +19,10 @@ import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.PathRename;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
-import no.maddin.oasbuddy.desktop.pane.ResponseCatalog;
+import no.maddin.oasbuddy.desktop.pane.ComponentCatalog;
+import no.maddin.oasbuddy.desktop.pane.ParameterPane;
+import no.maddin.oasbuddy.desktop.pane.ParameterRemoval;
+import no.maddin.oasbuddy.desktop.pane.ParametersPane;
 import no.maddin.oasbuddy.desktop.pane.ResponsePane;
 import no.maddin.oasbuddy.desktop.pane.ResponseRemoval;
 import no.maddin.oasbuddy.desktop.pane.ResponsesPane;
@@ -312,7 +315,7 @@ public class MainApp extends Application {
             PathItem pathItem = document.getPaths().getPathItem(path);
             TreeItem<OutlineNode> pathNode = new TreeItem<>(new OutlineNode(path,
                     () -> PathItemPane.build(document, path, this::refreshOutline, this::renamePath,
-                            () -> removePath(path), method -> removeOperation(path, method))));
+                            replaceConfirmation, () -> removePath(path), method -> removeOperation(path, method))));
             for (var entry : pathItem.getOperations().entrySet()) {
                 HttpMethod method = entry.getKey();
                 Operation operation = entry.getValue();
@@ -320,7 +323,7 @@ public class MainApp extends Application {
                 pathNode.getChildren().add(new TreeItem<>(new OutlineNode(method.name(),
                         () -> OperationPane.build(operation, schemaNames,
                                 TagCatalog.of(document), SecuritySchemeCatalog.of(document),
-                                ResponseCatalog.of(document), replaceConfirmation,
+                                ComponentCatalog.of(document), replaceConfirmation,
                                 () -> removeOperation(path, method)))));
             }
             pathsItem.getChildren().add(pathNode);
@@ -345,6 +348,15 @@ public class MainApp extends Application {
                             () -> document.getComponents().getSchemas().names(), this::removeResponse))));
         }
         root.getChildren().add(responsesItem);
+
+        TreeItem<OutlineNode> parametersItem = new TreeItem<>(new OutlineNode(
+                "Parameters", () -> ParametersPane.build(document, this::refreshOutline, this::removeParameter)));
+        parametersItem.setExpanded(true);
+        for (String key : document.getComponents().getParameters().names()) {
+            parametersItem.getChildren().add(new TreeItem<>(new OutlineNode(key,
+                    () -> ParameterPane.build(document, key, this::removeParameter))));
+        }
+        root.getChildren().add(parametersItem);
 
         TreeItem<OutlineNode> securitySchemesItem = new TreeItem<>(new OutlineNode(
                 "Security Schemes",
@@ -372,6 +384,11 @@ public class MainApp extends Application {
     private void removeResponse(String responseName) {
         ResponseRemoval.remove(document, responseName, confirmation,
                 () -> refreshAndSelect("Responses"));
+    }
+
+    private void removeParameter(String key) {
+        ParameterRemoval.remove(document, key, confirmation,
+                () -> refreshAndSelect("Parameters"));
     }
 
     private void removeTag(String tagName) {

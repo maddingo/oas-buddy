@@ -31,7 +31,7 @@ class PathItemPaneRenameTest extends ApplicationTest {
         document.getPaths().addPath("/owners");
 
         Node pane = PathItemPane.build(document, "/pets", () -> { }, this::onRenamePath,
-                () -> { }, method -> { });
+                (question, details) -> true, () -> { }, method -> { });
         stage.setScene(new Scene(new StackPane(pane), 900, 600));
         stage.show();
     }

@@ -95,6 +95,38 @@ class DocumentRoundTripTest {
                 .getResponses().getResponse("404").getReferencedResponseName());
     }
 
+    /** Component parameters, path-level parameters and references to both, built through the facade. */
+    @Test
+    void parametersBuiltThroughTheFacadeRoundTripInYaml() throws IOException {
+        assertParametersRoundTrip(DocumentFormat.YAML);
+    }
+
+    @Test
+    void parametersBuiltThroughTheFacadeRoundTripInJson() throws IOException {
+        assertParametersRoundTrip(DocumentFormat.JSON);
+    }
+
+    private static void assertParametersRoundTrip(DocumentFormat format) throws IOException {
+        OasDocument original = OasDocument.newDocument(format);
+        original.getComponents().getParameters().addParameter("Limit", "limit", "query")
+                .getSchema().setType("integer");
+        var path = original.getPaths().addPath("/pets/{petId}");
+        var petId = path.getParameters().add("petId", "path");
+        petId.setRequired(true);
+        petId.getSchema().setType("string");
+        path.getParameters().addReference("Limit");
+        var get = path.addOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET);
+        get.getParameters().addReference("Limit");
+        get.getParameters().add("sort", "query");
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertEquals("Limit", reloaded.getPaths().getPathItem("/pets/{petId}").getParameters().all().get(1)
+                .getReferencedParameterName());
+    }
+
     /** Root tags and an operation's own tags, built through the facade, round-trip in order. */
     @Test
     void tagsRoundTripInYaml() throws IOException {

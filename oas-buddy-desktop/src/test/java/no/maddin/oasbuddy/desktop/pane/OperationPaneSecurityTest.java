@@ -66,7 +66,7 @@ class OperationPaneSecurityTest extends ApplicationTest {
     private void rebuild() {
         holder.getChildren().setAll(OperationPane.build(operation(), List::of,
                 TagCatalog.of(document), SecuritySchemeCatalog.of(document),
-                ResponseCatalog.of(document), (question, details) -> true, () -> { }));
+                ComponentCatalog.of(document), (question, details) -> true, () -> { }));
     }
 
     private Operation operation() {

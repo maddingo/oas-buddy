@@ -36,6 +36,7 @@ class MainAppRemovalTest extends ApplicationTest {
         app.getDocument().getComponents().getSecuritySchemes().addScheme("OAuth2Auth").setType("oauth2");
         app.getDocument().getTags().add("pets");
         app.getDocument().getComponents().getResponses().addResponse("NotFound").setDescription("Not here");
+        app.getDocument().getComponents().getParameters().addParameter("Limit", "limit", "query");
         interact(() -> {
             app.refreshOutline();
         });
@@ -138,6 +139,21 @@ class MainAppRemovalTest extends ApplicationTest {
 
         assertFalse(app.getDocument().getComponents().getResponses().names().contains("NotFound"));
         assertTrue(lookup("#responses-list").tryQuery().isPresent(), "should land on the response list");
+    }
+
+    @Test
+    void componentParametersAppearInTheOutline() {
+        assertEquals(List.of("Limit"), outlineChildren("Parameters"));
+    }
+
+    @Test
+    void removingAParameterLeavesTheEditorOnTheParameterList() {
+        selectOutline("Parameters", "Limit");
+
+        interact(() -> deleteButton("#delete-parameter").fire());
+
+        assertFalse(app.getDocument().getComponents().getParameters().names().contains("Limit"));
+        assertTrue(lookup("#parameters-list").tryQuery().isPresent(), "should land on the parameter list");
     }
 
     @SuppressWarnings("unchecked")

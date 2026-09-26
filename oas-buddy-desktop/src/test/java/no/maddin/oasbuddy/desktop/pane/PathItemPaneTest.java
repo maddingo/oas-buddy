@@ -31,7 +31,7 @@ class PathItemPaneTest extends ApplicationTest {
         pets.addOperation(HttpMethod.POST).setOperationId("createPet");
 
         Node pane = PathItemPane.build(document, "/pets", () -> { }, (from, to) -> true,
-                () -> pathRemovals.add("/pets"), operationRemovals::add);
+                (question, details) -> true, () -> pathRemovals.add("/pets"), operationRemovals::add);
         stage.setScene(new Scene(new StackPane(pane), 900, 600));
         stage.show();
     }

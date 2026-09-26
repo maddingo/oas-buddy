@@ -18,6 +18,10 @@ public final class Components {
         return new ComponentResponses(node.child(ComponentResponses.SECTION));
     }
 
+    public ComponentParameters getParameters() {
+        return new ComponentParameters(node.child(ComponentParameters.SECTION));
+    }
+
     public SecuritySchemes getSecuritySchemes() {
         return new SecuritySchemes(node.child("securitySchemes"));
     }
