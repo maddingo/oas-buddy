@@ -30,6 +30,11 @@ public final class PathItem {
         JsonNodes.setText(node, "description", description);
     }
 
+    /** Parameters declared once for the path, applying to every operation on it. */
+    public Parameters getParameters() {
+        return new Parameters(node);
+    }
+
     public Map<HttpMethod, Operation> getOperations() {
         Map<HttpMethod, Operation> operations = new EnumMap<>(HttpMethod.class);
         for (HttpMethod method : HttpMethod.values()) {

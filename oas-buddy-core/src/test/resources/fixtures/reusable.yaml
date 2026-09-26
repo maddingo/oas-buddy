@@ -3,6 +3,18 @@ info:
   title: Reusable components
   version: 1.0.0
 paths:
+  /pets:
+    get:
+      operationId: listPets
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The pets
   /pets/{petId}:
     parameters:
       - name: petId
@@ -42,6 +54,13 @@ components:
       properties:
         message:
           type: string
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: How many items to return
+      schema:
+        type: integer
   responses:
     NotFound:
       description: The pet does not exist

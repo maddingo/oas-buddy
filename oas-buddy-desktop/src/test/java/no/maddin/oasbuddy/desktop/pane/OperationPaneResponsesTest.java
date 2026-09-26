@@ -72,7 +72,7 @@ class OperationPaneResponsesTest extends ApplicationTest {
         stage.show();
         holder.getChildren().setAll(OperationPane.build(
                 document.getPaths().getPathItem("/pets").getOperation(HttpMethod.GET), List::of,
-                TagCatalog.of(document), SecuritySchemeCatalog.of(document), ResponseCatalog.of(document),
+                TagCatalog.of(document), SecuritySchemeCatalog.of(document), ComponentCatalog.of(document),
                 (question, details) -> {
                     asked.add(question);
                     return answer;

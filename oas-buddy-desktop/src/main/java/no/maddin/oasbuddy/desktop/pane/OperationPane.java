@@ -2,7 +2,6 @@ package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.model.ApiResponse;
 import no.maddin.oasbuddy.core.model.Operation;
-import no.maddin.oasbuddy.core.model.Parameter;
 import no.maddin.oasbuddy.core.model.RequestBody;
 import no.maddin.oasbuddy.core.model.Responses;
 import no.maddin.oasbuddy.core.model.SecurityRequirements;
@@ -33,13 +32,14 @@ public final class OperationPane {
      * @param tagCatalog        the tags this operation's picker may offer, and where a tag typed
      *                          inline is declared
      * @param catalog           the schemes a security override may point at
-     * @param responseCatalog   the component responses a response may refer to instead of being inline
-     * @param confirmation      asked before an inline response is replaced by a reference
+     * @param components        the component responses and parameters that may be referred to
+     *                          instead of defined inline
+     * @param confirmation      asked before an inline response or parameter is replaced by a reference
      * @param onRemoveOperation asked to remove this operation; the pane only reports the request
      */
     public static Node build(Operation operation, Supplier<List<String>> schemaNames,
                              TagCatalog tagCatalog, SecuritySchemeCatalog catalog,
-                             ResponseCatalog responseCatalog, RemovalConfirmation confirmation,
+                             ComponentCatalog components, RemovalConfirmation confirmation,
                              Runnable onRemoveOperation) {
         GridPane grid = FormFields.grid();
         int row = 0;
@@ -50,21 +50,15 @@ public final class OperationPane {
         VBox tagsBox = new VBox(8);
         buildTags(operation, tagsBox, tagCatalog);
 
-        VBox parametersBox = new VBox(8);
-        refreshParameters(operation, parametersBox);
-        Button addParameterButton = new Button("Add parameter");
-        addParameterButton.getStyleClass().add(Styles.ACCENT);
-        addParameterButton.setOnAction(e -> {
-            operation.addParameter("newParam", "query");
-            refreshParameters(operation, parametersBox);
-        });
+        VBox parametersBox = ParametersEditor.build(operation.getParameters(), components, confirmation,
+                "operation-parameters");
 
         VBox requestBodyBox = new VBox(8);
         buildRequestBody(operation, requestBodyBox, schemaNames);
 
         VBox responsesBox = new VBox(8);
         responsesBox.setId("operation-responses");
-        refreshResponses(operation, responsesBox, schemaNames, responseCatalog, confirmation);
+        refreshResponses(operation, responsesBox, schemaNames, components, confirmation);
         TextField statusCodeField = new TextField();
         statusCodeField.setPromptText("status code, e.g. 200");
         Button addResponseButton = new Button("Add response");
@@ -74,7 +68,7 @@ public final class OperationPane {
             if (code != null && !code.isBlank()) {
                 operation.getResponses().addResponse(code.strip());
                 statusCodeField.clear();
-                refreshResponses(operation, responsesBox, schemaNames, responseCatalog, confirmation);
+                refreshResponses(operation, responsesBox, schemaNames, components, confirmation);
             }
         });
 
@@ -85,7 +79,7 @@ public final class OperationPane {
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
                 FormFields.heading("Tags"), tagsBox,
-                FormFields.heading("Parameters"), parametersBox, addParameterButton,
+                FormFields.heading("Parameters"), parametersBox,
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
                 FormFields.heading("Security"), securityBox);
@@ -237,36 +231,6 @@ public final class OperationPane {
         return checkBox;
     }
 
-    private static void refreshParameters(Operation operation, VBox box) {
-        box.getChildren().clear();
-        for (Parameter parameter : operation.getParameters()) {
-            TextField nameField = new TextField(nullToEmpty(parameter.getName()));
-            nameField.textProperty().addListener((obs, oldVal, newVal) -> parameter.setName(newVal));
-
-            ComboBox<String> inBox = new ComboBox<>();
-            inBox.getItems().addAll("query", "path", "header", "cookie");
-            inBox.setValue(parameter.getIn());
-            inBox.valueProperty().addListener((obs, oldVal, newVal) -> parameter.setIn(newVal));
-
-            CheckBox requiredBox = new CheckBox("Required");
-            requiredBox.setSelected(Boolean.TRUE.equals(parameter.isRequired()));
-            requiredBox.selectedProperty().addListener((obs, oldVal, newVal) -> parameter.setRequired(newVal));
-
-            TextField typeField = new TextField(nullToEmpty(parameter.getSchema().getType()));
-            typeField.setPromptText("type");
-            typeField.textProperty().addListener((obs, oldVal, newVal) -> parameter.getSchema().setType(newVal));
-
-            HBox row = new HBox(8,
-                    new Label("Name"), nameField,
-                    new Label("In"), inBox,
-                    requiredBox,
-                    new Label("Type"), typeField);
-            row.setAlignment(Pos.CENTER_LEFT);
-            row.getStyleClass().add(Styles.BORDERED);
-            box.getChildren().add(row);
-        }
-    }
-
     private static void buildRequestBody(Operation operation, VBox box, Supplier<List<String>> schemaNames) {
         RequestBody existing = operation.getRequestBody();
         if (existing == null) {
@@ -309,7 +273,7 @@ public final class OperationPane {
      * starts from a copy of what the reference pointed at, so that loses nothing and never asks.
      */
     private static void refreshResponses(Operation operation, VBox box, Supplier<List<String>> schemaNames,
-                                         ResponseCatalog responseCatalog, RemovalConfirmation confirmation) {
+                                         ComponentCatalog responseCatalog, RemovalConfirmation confirmation) {
         box.getChildren().clear();
         Responses responses = operation.getResponses();
         Runnable refresh = () -> refreshResponses(operation, box, schemaNames, responseCatalog, confirmation);
@@ -354,20 +318,15 @@ public final class OperationPane {
      * No id: a status code is user data, and ids are never built from user data. Tests find the
      * picker by its style class within the row labelled with the status code.
      */
-    private static ComboBox<ResponseSource> sourcePicker(Responses responses, String statusCode,
-                                                         ApiResponse response, ResponseCatalog responseCatalog,
+    private static ComboBox<SourceChoice> sourcePicker(Responses responses, String statusCode,
+                                                         ApiResponse response, ComponentCatalog responseCatalog,
                                                          RemovalConfirmation confirmation, Runnable refresh) {
-        ComboBox<ResponseSource> picker = new ComboBox<>();
+        ComboBox<SourceChoice> picker = new ComboBox<>();
         picker.getStyleClass().add("response-source");
-        picker.getItems().add(ResponseSource.INLINE);
-        responseCatalog.responseNames().forEach(name -> picker.getItems().add(new ResponseSource(name)));
-        ResponseSource current = response.isReference()
-                ? new ResponseSource(response.getReferencedResponseName())
-                : ResponseSource.INLINE;
-        if (!picker.getItems().contains(current)) {
-            // a reference to a response that is not declared: shown as it is, so the form agrees with the file
-            picker.getItems().add(current);
-        }
+        SourceChoice current = response.isReference()
+                ? new SourceChoice(response.getReferencedResponseName())
+                : SourceChoice.INLINE;
+        picker.getItems().addAll(SourceChoice.choices(responseCatalog.responseNames(), current));
         picker.setValue(current);
 
         // Reverting a declined switch would otherwise re-enter this listener.
@@ -392,22 +351,6 @@ public final class OperationPane {
             refresh.run();
         });
         return picker;
-    }
-
-    /** One entry of a response's source picker: inline ({@code name == null}) or a component response. */
-    record ResponseSource(String name) {
-
-        static final ResponseSource INLINE = new ResponseSource(null);
-
-        boolean isInline() {
-            return name == null;
-        }
-
-        /** A reference is marked the same way {@link TypeChoice} marks one. */
-        @Override
-        public String toString() {
-            return isInline() ? "Inline" : "→ " + name;
-        }
     }
 
     private static String refToSchemaName(String ref) {

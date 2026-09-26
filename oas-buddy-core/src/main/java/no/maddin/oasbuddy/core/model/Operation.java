@@ -71,26 +71,9 @@ public final class Operation {
         }
     }
 
-    public List<Parameter> getParameters() {
-        List<Parameter> parameters = new ArrayList<>();
-        var existing = node.get("parameters");
-        if (existing instanceof ArrayNode arrayNode) {
-            for (var element : arrayNode) {
-                if (element instanceof ObjectNode objectNode) {
-                    parameters.add(new Parameter(objectNode));
-                }
-            }
-        }
-        return parameters;
-    }
-
-    public Parameter addParameter(String name, String in) {
-        ArrayNode array = JsonNodes.arrayChild(node, "parameters");
-        ObjectNode paramNode = array.addObject();
-        Parameter parameter = new Parameter(paramNode);
-        parameter.setName(name);
-        parameter.setIn(in);
-        return parameter;
+    /** This operation's own parameters; path-level ones apply too, see {@link PathItem#getParameters}. */
+    public Parameters getParameters() {
+        return new Parameters(node);
     }
 
     public RequestBody getRequestBody() {

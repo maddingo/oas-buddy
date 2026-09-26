@@ -14,6 +14,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -29,13 +30,14 @@ public final class PathItemPane {
      * @param onRenamePath        asked to rename this path to a new, not-yet-used one; returns
      *                            whether the rename went ahead. The pane only reports the request,
      *                            it never renames anything itself.
+     * @param confirmation        asked before an inline path parameter is replaced by a reference
      * @param onRemovePath        asked to remove this whole path
      * @param onRemoveOperation   asked to remove one of its operations; like the other panes this
      *                            one only reports the request, it never removes anything itself
      */
     public static Node build(OasDocument document, String path, Runnable onStructureChanged,
                              BiFunction<String, String, Boolean> onRenamePath,
-                             Runnable onRemovePath, Consumer<HttpMethod> onRemoveOperation) {
+                             RemovalConfirmation confirmation, Runnable onRemovePath, Consumer<HttpMethod> onRemoveOperation) {
         PathItem pathItem = document.getPaths().getPathItem(path);
 
         TextField nameField = FormFields.renameField(path, candidate ->
@@ -48,6 +50,12 @@ public final class PathItemPane {
         int row = 0;
         FormFields.textRow(grid, row++, "Summary", pathItem::getSummary, pathItem::setSummary);
         FormFields.textAreaRow(grid, row, "Description", pathItem::getDescription, pathItem::setDescription);
+
+        // declared once here, these apply to every operation on the path
+        VBox parameters = ParametersEditor.build(pathItem.getParameters(), ComponentCatalog.of(document),
+                confirmation, "path-parameters");
+        Label parametersNote = new Label("Apply to every operation on this path.");
+        parametersNote.getStyleClass().add(Styles.TEXT_MUTED);
 
         GridPane operations = FormFields.grid();
         operations.setId("path-operations");
@@ -76,6 +84,7 @@ public final class PathItemPane {
         return FormFields.root(
                 FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath),
                 grid,
+                FormFields.heading("Parameters"), parametersNote, parameters,
                 FormFields.heading("Operations"), operations,
                 addOperationLabel, methodButtons);
     }
