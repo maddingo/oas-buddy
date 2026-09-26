@@ -28,6 +28,7 @@ public final class OasValidator {
         result.getMessages().forEach(message -> messages.add(new ValidationMessage(ValidationSeverity.ERROR, message)));
         messages.addAll(checkConstraints(content));
         messages.addAll(checkTags(content));
+        messages.addAll(checkReferences(content));
         return new ValidationResult(messages);
     }
 
@@ -35,6 +36,15 @@ public final class OasValidator {
     private static List<ValidationMessage> checkConstraints(String content) {
         try {
             return ConstraintCheck.check(YAML.readTree(content));
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+
+    /** Content swagger-parser could not read has already been reported by it; nothing to add. */
+    private static List<ValidationMessage> checkReferences(String content) {
+        try {
+            return ReferenceCheck.check(YAML.readTree(content));
         } catch (JsonProcessingException e) {
             return List.of();
         }

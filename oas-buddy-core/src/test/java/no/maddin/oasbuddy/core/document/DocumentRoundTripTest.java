@@ -57,6 +57,44 @@ class DocumentRoundTripTest {
         assertRoundTrips("structured.json", DocumentFormat.JSON);
     }
 
+    @Test
+    void reusableComponentsRoundTripInYaml() throws IOException {
+        assertRoundTrips("reusable.yaml", DocumentFormat.YAML);
+    }
+
+    @Test
+    void reusableComponentsRoundTripInJson() throws IOException {
+        assertRoundTrips("reusable.json", DocumentFormat.JSON);
+    }
+
+    /** Component responses and references to them, built through the facade, round-trip in order. */
+    @Test
+    void componentResponsesBuiltThroughTheFacadeRoundTripInYaml() throws IOException {
+        assertComponentResponsesRoundTrip(DocumentFormat.YAML);
+    }
+
+    @Test
+    void componentResponsesBuiltThroughTheFacadeRoundTripInJson() throws IOException {
+        assertComponentResponsesRoundTrip(DocumentFormat.JSON);
+    }
+
+    private static void assertComponentResponsesRoundTrip(DocumentFormat format) throws IOException {
+        OasDocument original = OasDocument.newDocument(format);
+        original.getComponents().getResponses().addResponse("NotFound").setDescription("Not found");
+        var responses = original.getPaths().addPath("/pets")
+                .addOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET).getResponses();
+        responses.addResponse("200").setDescription("OK");
+        responses.referTo("404", "NotFound");
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertEquals("NotFound", reloaded.getPaths().getPathItem("/pets")
+                .getOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET)
+                .getResponses().getResponse("404").getReferencedResponseName());
+    }
+
     /** Root tags and an operation's own tags, built through the facade, round-trip in order. */
     @Test
     void tagsRoundTripInYaml() throws IOException {

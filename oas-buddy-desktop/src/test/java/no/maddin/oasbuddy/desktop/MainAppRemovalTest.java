@@ -35,6 +35,7 @@ class MainAppRemovalTest extends ApplicationTest {
         app.getDocument().getComponents().getSecuritySchemes().addScheme("ApiKeyAuth").setType("apiKey");
         app.getDocument().getComponents().getSecuritySchemes().addScheme("OAuth2Auth").setType("oauth2");
         app.getDocument().getTags().add("pets");
+        app.getDocument().getComponents().getResponses().addResponse("NotFound").setDescription("Not here");
         interact(() -> {
             app.refreshOutline();
         });
@@ -122,6 +123,21 @@ class MainAppRemovalTest extends ApplicationTest {
         assertFalse(app.getDocument().getComponents().getSecuritySchemes().names().contains("ApiKeyAuth"));
         assertTrue(lookup("#security-schemes-list").tryQuery().isPresent(),
                 "should land on the security scheme list");
+    }
+
+    @Test
+    void componentResponsesAppearInTheOutline() {
+        assertEquals(List.of("NotFound"), outlineChildren("Responses"));
+    }
+
+    @Test
+    void removingAResponseLeavesTheEditorOnTheResponseList() {
+        selectOutline("Responses", "NotFound");
+
+        interact(() -> deleteButton("#delete-response").fire());
+
+        assertFalse(app.getDocument().getComponents().getResponses().names().contains("NotFound"));
+        assertTrue(lookup("#responses-list").tryQuery().isPresent(), "should land on the response list");
     }
 
     @SuppressWarnings("unchecked")

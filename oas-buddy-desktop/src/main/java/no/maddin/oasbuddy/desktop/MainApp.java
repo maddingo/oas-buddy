@@ -19,6 +19,10 @@ import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.PathRename;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
+import no.maddin.oasbuddy.desktop.pane.ResponseCatalog;
+import no.maddin.oasbuddy.desktop.pane.ResponsePane;
+import no.maddin.oasbuddy.desktop.pane.ResponseRemoval;
+import no.maddin.oasbuddy.desktop.pane.ResponsesPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaRemoval;
 import no.maddin.oasbuddy.desktop.pane.SchemaRename;
 import no.maddin.oasbuddy.desktop.pane.SchemasPane;
@@ -81,6 +85,12 @@ public class MainApp extends Application {
 
     /** Overridden by tests, which cannot answer a modal dialog; its button reads "Rename". */
     private RemovalConfirmation renameConfirmation = RemovalConfirmation.dialog("Rename");
+
+    /**
+     * Overridden by tests, which cannot answer a modal dialog; asked before an inline definition is
+     * replaced by a reference, so its button reads "Replace".
+     */
+    private RemovalConfirmation replaceConfirmation = RemovalConfirmation.dialog("Replace");
 
     /** Overridden by tests, which cannot dismiss a modal dialog. */
     private Runnable aboutAction = this::showAbout;
@@ -310,6 +320,7 @@ public class MainApp extends Application {
                 pathNode.getChildren().add(new TreeItem<>(new OutlineNode(method.name(),
                         () -> OperationPane.build(operation, schemaNames,
                                 TagCatalog.of(document), SecuritySchemeCatalog.of(document),
+                                ResponseCatalog.of(document), replaceConfirmation,
                                 () -> removeOperation(path, method)))));
             }
             pathsItem.getChildren().add(pathNode);
@@ -324,6 +335,16 @@ public class MainApp extends Application {
                     new OutlineNode(name, () -> SchemaPane.build(document, name, this::renameSchema, this::removeSchema))));
         }
         root.getChildren().add(schemasItem);
+
+        TreeItem<OutlineNode> responsesItem = new TreeItem<>(new OutlineNode(
+                "Responses", () -> ResponsesPane.build(document, this::refreshOutline, this::removeResponse)));
+        responsesItem.setExpanded(true);
+        for (String name : document.getComponents().getResponses().names()) {
+            responsesItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
+                    () -> ResponsePane.build(document, name,
+                            () -> document.getComponents().getSchemas().names(), this::removeResponse))));
+        }
+        root.getChildren().add(responsesItem);
 
         TreeItem<OutlineNode> securitySchemesItem = new TreeItem<>(new OutlineNode(
                 "Security Schemes",
@@ -346,6 +367,11 @@ public class MainApp extends Application {
     private void removeSchema(String schemaName) {
         SchemaRemoval.remove(document, schemaName, confirmation,
                 () -> refreshAndSelect("Schemas"));
+    }
+
+    private void removeResponse(String responseName) {
+        ResponseRemoval.remove(document, responseName, confirmation,
+                () -> refreshAndSelect("Responses"));
     }
 
     private void removeTag(String tagName) {
@@ -425,6 +451,10 @@ public class MainApp extends Application {
 
     void setRenameConfirmation(RemovalConfirmation renameConfirmation) {
         this.renameConfirmation = renameConfirmation;
+    }
+
+    void setReplaceConfirmation(RemovalConfirmation replaceConfirmation) {
+        this.replaceConfirmation = replaceConfirmation;
     }
 
     void setAboutAction(Runnable aboutAction) {

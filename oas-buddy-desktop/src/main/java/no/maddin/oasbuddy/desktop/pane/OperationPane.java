@@ -33,10 +33,14 @@ public final class OperationPane {
      * @param tagCatalog        the tags this operation's picker may offer, and where a tag typed
      *                          inline is declared
      * @param catalog           the schemes a security override may point at
+     * @param responseCatalog   the component responses a response may refer to instead of being inline
+     * @param confirmation      asked before an inline response is replaced by a reference
      * @param onRemoveOperation asked to remove this operation; the pane only reports the request
      */
     public static Node build(Operation operation, Supplier<List<String>> schemaNames,
-                             TagCatalog tagCatalog, SecuritySchemeCatalog catalog, Runnable onRemoveOperation) {
+                             TagCatalog tagCatalog, SecuritySchemeCatalog catalog,
+                             ResponseCatalog responseCatalog, RemovalConfirmation confirmation,
+                             Runnable onRemoveOperation) {
         GridPane grid = FormFields.grid();
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
@@ -59,7 +63,8 @@ public final class OperationPane {
         buildRequestBody(operation, requestBodyBox, schemaNames);
 
         VBox responsesBox = new VBox(8);
-        refreshResponses(operation, responsesBox, schemaNames);
+        responsesBox.setId("operation-responses");
+        refreshResponses(operation, responsesBox, schemaNames, responseCatalog, confirmation);
         TextField statusCodeField = new TextField();
         statusCodeField.setPromptText("status code, e.g. 200");
         Button addResponseButton = new Button("Add response");
@@ -69,7 +74,7 @@ public final class OperationPane {
             if (code != null && !code.isBlank()) {
                 operation.getResponses().addResponse(code.strip());
                 statusCodeField.clear();
-                refreshResponses(operation, responsesBox, schemaNames);
+                refreshResponses(operation, responsesBox, schemaNames, responseCatalog, confirmation);
             }
         });
 
@@ -297,36 +302,111 @@ public final class OperationPane {
         box.getChildren().setAll(row);
     }
 
-    private static void refreshResponses(Operation operation, VBox box, Supplier<List<String>> schemaNames) {
+    /**
+     * One row per status code. Each row's first picker says where the response is defined: inline,
+     * or a reference to a component response. Switching to a reference replaces an inline
+     * definition, so that asks first when there is something to lose; switching back to inline
+     * starts from a copy of what the reference pointed at, so that loses nothing and never asks.
+     */
+    private static void refreshResponses(Operation operation, VBox box, Supplier<List<String>> schemaNames,
+                                         ResponseCatalog responseCatalog, RemovalConfirmation confirmation) {
         box.getChildren().clear();
         Responses responses = operation.getResponses();
+        Runnable refresh = () -> refreshResponses(operation, box, schemaNames, responseCatalog, confirmation);
         for (String statusCode : responses.statusCodes()) {
             ApiResponse response = responses.getResponse(statusCode);
+            if (response == null) {
+                continue;
+            }
 
-            TextField descriptionField = new TextField(nullToEmpty(response.getDescription()));
-            descriptionField.textProperty().addListener((obs, oldVal, newVal) -> response.setDescription(newVal));
+            HBox row = new HBox(8, new Label(statusCode));
+            row.getStyleClass().add("operation-response");
 
-            ComboBox<String> schemaBox = new ComboBox<>();
-            schemaBox.getItems().addAll(schemaNames.get());
-            schemaBox.setValue(refToSchemaName(response.getSchema("application/json").getRef()));
-            schemaBox.valueProperty().addListener((obs, oldVal, newVal) ->
-                    response.getSchema("application/json").setRef(newVal == null ? null : "#/components/schemas/" + newVal));
+            if (response.isReference() && response.getReferencedResponseName() == null) {
+                // a reference this editor cannot follow (another file, another section): shown, not edited
+                Label ref = new Label("$ref: " + response.getRef());
+                ref.getStyleClass().add(Styles.TEXT_MUTED);
+                row.getChildren().add(ref);
+            } else {
+                row.getChildren().add(sourcePicker(responses, statusCode, response, responseCatalog,
+                        confirmation, refresh));
+                if (!response.isReference()) {
+                    row.getChildren().addAll(
+                            new Label("Description"), ResponseForm.descriptionField(response),
+                            new Label("Schema"), ResponseForm.schemaPicker(response, schemaNames));
+                }
+            }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);
             removeButton.setOnAction(e -> {
                 responses.removeResponse(statusCode);
-                refreshResponses(operation, box, schemaNames);
+                refresh.run();
             });
-
-            HBox row = new HBox(8,
-                    new Label(statusCode),
-                    new Label("Description"), descriptionField,
-                    new Label("Schema"), schemaBox,
-                    removeButton);
+            row.getChildren().add(removeButton);
             row.setAlignment(Pos.CENTER_LEFT);
             row.getStyleClass().add(Styles.BORDERED);
             box.getChildren().add(row);
+        }
+    }
+
+    /**
+     * No id: a status code is user data, and ids are never built from user data. Tests find the
+     * picker by its style class within the row labelled with the status code.
+     */
+    private static ComboBox<ResponseSource> sourcePicker(Responses responses, String statusCode,
+                                                         ApiResponse response, ResponseCatalog responseCatalog,
+                                                         RemovalConfirmation confirmation, Runnable refresh) {
+        ComboBox<ResponseSource> picker = new ComboBox<>();
+        picker.getStyleClass().add("response-source");
+        picker.getItems().add(ResponseSource.INLINE);
+        responseCatalog.responseNames().forEach(name -> picker.getItems().add(new ResponseSource(name)));
+        ResponseSource current = response.isReference()
+                ? new ResponseSource(response.getReferencedResponseName())
+                : ResponseSource.INLINE;
+        if (!picker.getItems().contains(current)) {
+            // a reference to a response that is not declared: shown as it is, so the form agrees with the file
+            picker.getItems().add(current);
+        }
+        picker.setValue(current);
+
+        // Reverting a declined switch would otherwise re-enter this listener.
+        boolean[] reverting = {false};
+        picker.valueProperty().addListener((obs, was, now) -> {
+            if (reverting[0] || now == null || now.equals(was)) {
+                return;
+            }
+            if (now.isInline()) {
+                responses.defineInline(statusCode, responseCatalog.response(was.name()));
+            } else if (!response.isReference() && !response.isEmpty()
+                    && !confirmation.confirm(
+                            "Replace the inline " + statusCode + " response with a reference to \"" + now.name() + "\"?",
+                            "Its description and content are defined only here, and will be discarded.")) {
+                reverting[0] = true;
+                picker.setValue(was);
+                reverting[0] = false;
+                return;
+            } else {
+                responses.referTo(statusCode, now.name());
+            }
+            refresh.run();
+        });
+        return picker;
+    }
+
+    /** One entry of a response's source picker: inline ({@code name == null}) or a component response. */
+    record ResponseSource(String name) {
+
+        static final ResponseSource INLINE = new ResponseSource(null);
+
+        boolean isInline() {
+            return name == null;
+        }
+
+        /** A reference is marked the same way {@link TypeChoice} marks one. */
+        @Override
+        public String toString() {
+            return isInline() ? "Inline" : "→ " + name;
         }
     }
 
