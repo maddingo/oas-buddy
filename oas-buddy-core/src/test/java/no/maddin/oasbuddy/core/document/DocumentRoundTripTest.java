@@ -127,6 +127,42 @@ class DocumentRoundTripTest {
                 .getReferencedParameterName());
     }
 
+    /** Several media types with schemas and examples, and a component example referenced from one. */
+    @Test
+    void mediaTypesAndExamplesBuiltThroughTheFacadeRoundTripInYaml() throws IOException {
+        assertMediaTypesRoundTrip(DocumentFormat.YAML);
+    }
+
+    @Test
+    void mediaTypesAndExamplesBuiltThroughTheFacadeRoundTripInJson() throws IOException {
+        assertMediaTypesRoundTrip(DocumentFormat.JSON);
+    }
+
+    private static void assertMediaTypesRoundTrip(DocumentFormat format) throws IOException {
+        OasDocument original = OasDocument.newDocument(format);
+        original.getComponents().getExamples().addExample("Cat")
+                .setValue(com.fasterxml.jackson.databind.node.TextNode.valueOf("Tom"));
+        var get = original.getPaths().addPath("/pets").addOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET);
+        var ok = get.getResponses().addResponse("200");
+        ok.setDescription("OK");
+        var xml = ok.getContent().add("application/xml");
+        xml.getSchema().setType("string");
+        xml.setExample(com.fasterxml.jackson.databind.node.TextNode.valueOf("<pet/>"));
+        var json = ok.getContent().add("application/json");
+        json.getSchema().referTo("Pet");
+        json.getExamples().referTo("cat", "Cat");
+        json.getExamples().add("dog").setSummary("A dog");
+        ok.getContent().add("*/*");
+
+        OasDocument reloaded = DocumentReader.read(DocumentWriter.write(original), format);
+
+        assertEquals(fieldOrder(original.getRoot()), fieldOrder(reloaded.getRoot()));
+        assertEquals(original.getRoot(), reloaded.getRoot());
+        assertEquals(List.of("application/xml", "application/json", "*/*"),
+                reloaded.getPaths().getPathItem("/pets").getOperation(no.maddin.oasbuddy.core.model.HttpMethod.GET)
+                        .getResponses().getResponse("200").getContent().mediaTypes());
+    }
+
     /** Root tags and an operation's own tags, built through the facade, round-trip in order. */
     @Test
     void tagsRoundTripInYaml() throws IOException {

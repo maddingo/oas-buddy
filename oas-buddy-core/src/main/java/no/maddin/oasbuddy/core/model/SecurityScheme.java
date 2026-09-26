@@ -79,7 +79,8 @@ public final class SecurityScheme {
      * document order, or empty for a type that has none.
      *
      * <p>The union rather than one flow's scopes, because a requirement names the scheme and not a
-     * flow, so a scope any flow defines is legitimate to require.
+     * flow, so a scope any flow defines is legitimate to require. A flow whose value is not an
+     * object ({@code implicit: ~}) defines no scopes and is skipped.
      */
     public List<String> declaredScopes() {
         if (!"oauth2".equals(getType())) {
@@ -88,7 +89,11 @@ public final class SecurityScheme {
         OAuthFlows flows = getFlows();
         List<String> scopes = new ArrayList<>();
         for (String flowName : flows.names()) {
-            for (String scope : flows.getFlow(flowName).scopeNames()) {
+            OAuthFlow flow = flows.getFlow(flowName);
+            if (flow == null) {
+                continue;
+            }
+            for (String scope : flow.scopeNames()) {
                 if (!scopes.contains(scope)) {
                     scopes.add(scope);
                 }

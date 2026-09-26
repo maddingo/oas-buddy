@@ -44,6 +44,24 @@ public final class Tags {
     }
 
     /** The named tag, or {@code null} if no tag with that name is declared. */
+    /**
+     * Every declared tag, in document order — the same entries {@link #names()} lists, as objects.
+     * Iterate this rather than {@code names()} plus {@link #get}: with a duplicate name (a spec
+     * error, but a loadable file) {@code get} only ever finds the first, so a name-keyed round trip
+     * would point every duplicate's row at the first tag.
+     */
+    public List<Tag> all() {
+        List<Tag> all = new ArrayList<>();
+        if (root.get(FIELD) instanceof ArrayNode array) {
+            for (var element : array) {
+                if (element instanceof ObjectNode tag && JsonNodes.text(tag, NAME_FIELD) != null) {
+                    all.add(new Tag(tag));
+                }
+            }
+        }
+        return all;
+    }
+
     public Tag get(String name) {
         if (root.get(FIELD) instanceof ArrayNode array) {
             for (var element : array) {

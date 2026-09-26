@@ -8,6 +8,16 @@ A desktop editor for OpenAPI Specification (OAS) documents.
 
 See [CLAUDE.md](CLAUDE.md) for the full project vision, MVP scope, and architecture decisions.
 
+## Project Metrics
+
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=maddingo_oas-buddy&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=maddingo_oas-buddy)
+
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=maddingo_oas-buddy&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=maddingo_oas-buddy)
+
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=maddingo_oas-buddy&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=maddingo_oas-buddy)
+
+[![Security issues](https://sonarcloud.io/api/project_badges/measure?project=maddingo_oas-buddy&metric=software_quality_security_issues)](https://sonarcloud.io/summary/new_code?id=maddingo_oas-buddy)
+
 ## Branding
 
 The app icon and its palette live in [docs/branding/](docs/branding/). `oas-buddy-icon.svg` is the

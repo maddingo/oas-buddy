@@ -35,12 +35,13 @@ class OAuthFlowsPaneTest extends ApplicationTest {
     private final List<String> confirmations = new ArrayList<>();
     private boolean confirm = true;
 
+    private OasDocument document;
     private SecurityScheme scheme;
     private StackPane holder;
 
     @Override
     public void start(Stage stage) {
-        OasDocument document = OasDocument.newDocument(DocumentFormat.YAML);
+        document = OasDocument.newDocument(DocumentFormat.YAML);
         scheme = document.getComponents().getSecuritySchemes().addScheme("OAuth");
         scheme.setType("oauth2");
 
@@ -185,6 +186,31 @@ class OAuthFlowsPaneTest extends ApplicationTest {
 
         interact(() -> lookup("#flow-implicit-remove-scope-0").queryButton().fire());
         assertEquals(List.of(), scheme.getFlows().getFlow("implicit").scopeNames());
+    }
+
+    /**
+     * A hand-edited {@code implicit: ~}: present, so its switch is on and the form agrees with the
+     * file, but there is nothing in it to edit, and switching it off removes it without asking.
+     */
+    @Test
+    void aFlowThatIsNotAnObjectShowsAsOnWithANoteAndCanBeSwitchedOff() {
+        interact(() -> {
+            scheme.getFlows().addFlow("password");
+            ((com.fasterxml.jackson.databind.node.ObjectNode) document.getRoot()
+                    .at("/components/securitySchemes/OAuth/flows")).putNull("implicit");
+            rebuild();
+        });
+
+        assertAll(
+                () -> assertTrue(checkBox("implicit").isSelected()),
+                () -> assertTrue(lookup("#flow-implicit-not-editable").tryQuery().isPresent()),
+                () -> assertFalse(lookup("#flow-implicit-urls").tryQuery().isPresent()));
+
+        interact(() -> checkBox("implicit").setSelected(false));
+
+        assertAll(
+                () -> assertEquals(List.of("password"), scheme.getFlows().names()),
+                () -> assertEquals(List.of(), confirmations, "nothing to lose, so nothing is asked"));
     }
 
     private void givenAPopulatedImplicitFlow() {

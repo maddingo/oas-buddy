@@ -58,6 +58,20 @@ class TagsTest {
         assertEquals("Everything about pets", again.getDescription());
     }
 
+    /** A duplicate name is a spec error, but a loadable file: each entry must stay its own tag. */
+    @Test
+    void allReturnsEachEntryEvenWhenNamesRepeat() {
+        OasDocument document = OasDocument.newDocument(DocumentFormat.YAML);
+        var array = document.getRoot().putArray("tags");
+        array.addObject().put("name", "pets").put("description", "first");
+        array.addObject().put("name", "pets").put("description", "second");
+        array.addObject().put("description", "no name");
+
+        List<Tag> all = document.getTags().all();
+
+        assertEquals(List.of("first", "second"), all.stream().map(Tag::getDescription).toList());
+    }
+
     @Test
     void removingTheLastTagTakesTheKeyOutOfTheDocument() {
         OasDocument document = bare();

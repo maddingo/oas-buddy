@@ -36,6 +36,9 @@ public final class SecuritySchemePane {
 
         Node header = FormFields.headerWithDelete("Security scheme: " + schemeName,
                 "delete-security-scheme", "Delete scheme", () -> onRemoveScheme.accept(schemeName));
+        if (scheme == null) {
+            return FormFields.root(header, FormFields.notEditable(schemeName, "a security scheme"));
+        }
 
         if (!scheme.isEditable()) {
             Label explanation = new Label(scheme.getType() + " schemes cannot be edited yet. "

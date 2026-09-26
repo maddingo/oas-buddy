@@ -37,6 +37,7 @@ class MainAppRemovalTest extends ApplicationTest {
         app.getDocument().getTags().add("pets");
         app.getDocument().getComponents().getResponses().addResponse("NotFound").setDescription("Not here");
         app.getDocument().getComponents().getParameters().addParameter("Limit", "limit", "query");
+        app.getDocument().getComponents().getExamples().addExample("Cat").setSummary("A cat");
         interact(() -> {
             app.refreshOutline();
         });
@@ -154,6 +155,39 @@ class MainAppRemovalTest extends ApplicationTest {
 
         assertFalse(app.getDocument().getComponents().getParameters().names().contains("Limit"));
         assertTrue(lookup("#parameters-list").tryQuery().isPresent(), "should land on the parameter list");
+    }
+
+    @Test
+    void componentExamplesAppearInTheOutline() {
+        assertEquals(List.of("Cat"), outlineChildren("Examples"));
+    }
+
+    @Test
+    void removingAnExampleLeavesTheEditorOnTheExampleList() {
+        selectOutline("Examples", "Cat");
+
+        interact(() -> deleteButton("#delete-example").fire());
+
+        assertFalse(app.getDocument().getComponents().getExamples().names().contains("Cat"));
+        assertTrue(lookup("#examples-list").tryQuery().isPresent(), "should land on the example list");
+    }
+
+    /**
+     * A hand-edited {@code /odd: ~} once crashed the whole outline, which reads each path's
+     * operations while it builds. It must show as a path with no operations, and be removable.
+     */
+    @Test
+    void aPathThatIsNotAnObjectStillShowsInTheOutlineAndCanBeRemoved() {
+        interact(() -> {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) app.getDocument().getRoot().get("paths")).putNull("/odd");
+            app.refreshOutline();
+        });
+        assertTrue(outlineChildren("Paths").contains("/odd"));
+
+        selectOutline("Paths", "/odd");
+        interact(() -> deleteButton("#delete-path").fire());
+
+        assertFalse(app.getDocument().getPaths().pathNames().contains("/odd"));
     }
 
     @SuppressWarnings("unchecked")

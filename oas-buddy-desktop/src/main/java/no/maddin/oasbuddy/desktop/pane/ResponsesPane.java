@@ -1,6 +1,7 @@
 package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.document.OasDocument;
+import no.maddin.oasbuddy.core.model.ApiResponse;
 import no.maddin.oasbuddy.core.model.ComponentResponses;
 import atlantafx.base.theme.Styles;
 import javafx.geometry.HPos;
@@ -73,9 +74,15 @@ public final class ResponsesPane {
 
         int row = 1;
         for (String name : names) {
-            String description = responses.getResponse(name).getDescription();
-            Label descriptionLabel = new Label(description == null ? "" : description);
-            descriptionLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            ApiResponse response = responses.getResponse(name);
+            Label descriptionLabel;
+            if (response == null) {
+                descriptionLabel = FormFields.notAnObject();
+            } else {
+                String description = response.getDescription();
+                descriptionLabel = new Label(description == null ? "" : description);
+                descriptionLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);

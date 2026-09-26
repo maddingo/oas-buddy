@@ -22,6 +22,10 @@ public final class Components {
         return new ComponentParameters(node.child(ComponentParameters.SECTION));
     }
 
+    public ComponentExamples getExamples() {
+        return new ComponentExamples(node.child(ComponentExamples.SECTION));
+    }
+
     public SecuritySchemes getSecuritySchemes() {
         return new SecuritySchemes(node.child("securitySchemes"));
     }

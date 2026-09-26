@@ -76,8 +76,13 @@ public final class ParametersPane {
         int row = 1;
         for (String key : keys) {
             Parameter parameter = parameters.getParameter(key);
-            Label nameAndLocation = new Label(parameter.getName() + " in " + parameter.getIn());
-            nameAndLocation.getStyleClass().add(Styles.TEXT_MUTED);
+            Label nameAndLocation;
+            if (parameter == null) {
+                nameAndLocation = FormFields.notAnObject();
+            } else {
+                nameAndLocation = new Label(parameter.getName() + " in " + parameter.getIn());
+                nameAndLocation.getStyleClass().add(Styles.TEXT_MUTED);
+            }
 
             Button removeButton = new Button("Remove");
             removeButton.getStyleClass().addAll(Styles.DANGER, Styles.BUTTON_OUTLINED);

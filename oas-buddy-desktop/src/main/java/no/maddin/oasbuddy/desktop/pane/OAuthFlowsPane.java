@@ -62,11 +62,14 @@ public final class OAuthFlowsPane {
     private static Node flowBlock(OAuthFlows flows, String flowName,
                                   RemovalConfirmation confirmation, Runnable onChanged) {
         OAuthFlow flow = flows.getFlow(flowName);
+        // present but not an object ({@code implicit: ~}): switched on, so the form agrees with the
+        // file, and switching it off removes it; there is nothing in it to edit
+        boolean present = flows.names().contains(flowName);
 
         CheckBox enabled = new CheckBox(flowName);
         enabled.setId("flow-" + flowName + "-enabled");
         enabled.getStyleClass().add(Styles.TEXT_BOLD);
-        enabled.setSelected(flow != null);
+        enabled.setSelected(present);
         // Reverting a declined switch would otherwise re-enter this listener.
         boolean[] reverting = {false};
         enabled.selectedProperty().addListener((obs, was, now) -> {
@@ -92,6 +95,13 @@ public final class OAuthFlowsPane {
 
         VBox block = new VBox(8, enabled);
         if (flow == null) {
+            if (present) {
+                Label note = new Label("Not a flow object; left exactly as it was loaded.");
+                note.setId("flow-" + flowName + "-not-editable");
+                note.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.WARNING);
+                note.setPadding(new Insets(0, 0, 0, 24));
+                block.getChildren().add(note);
+            }
             return block;
         }
 

@@ -45,6 +45,11 @@ public final class PathItemPane {
                         ? "A path named \"" + candidate + "\" already exists."
                         : onRenamePath.apply(path, candidate) ? null : "");
         nameField.setId("path-name");
+        if (pathItem == null) {
+            return FormFields.root(
+                    FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath),
+                    FormFields.notEditable(path, "a path item"));
+        }
 
         GridPane grid = FormFields.grid();
         int row = 0;

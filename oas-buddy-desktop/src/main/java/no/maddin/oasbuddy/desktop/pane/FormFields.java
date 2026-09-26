@@ -80,6 +80,29 @@ final class FormFields {
         return header;
     }
 
+    /**
+     * What a component editor shows instead of a form when the entry under {@code name} is not an
+     * object at all — {@code NotFound: ~} or a string in a hand-edited file. The outline lists every
+     * key, so such an entry is reachable, and it must neither crash the pane nor be rewritten into
+     * something editable: it is left exactly as loaded, the same bargain a security scheme of an
+     * unsupported type gets. The header above it still offers Delete.
+     */
+    static Label notEditable(String name, String kind) {
+        Label label = new Label("\"" + name + "\" is not " + kind + " object, so it cannot be edited here. "
+                + "It is left exactly as it was loaded, and is saved unchanged.");
+        label.setId("not-editable");
+        label.getStyleClass().add(Styles.TEXT_MUTED);
+        label.setWrapText(true);
+        return label;
+    }
+
+    /** The second-column text a list pane shows for an entry that is not an object; see {@link #notEditable}. */
+    static Label notAnObject() {
+        Label label = new Label("(not an object)");
+        label.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.WARNING);
+        return label;
+    }
+
     static Label heading(String text) {
         Label label = new Label(text);
         label.getStyleClass().add(Styles.TITLE_4);

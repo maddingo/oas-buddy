@@ -3,8 +3,6 @@ package no.maddin.oasbuddy.core.model;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.document.JsonNodes;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public final class RequestBody {
@@ -31,21 +29,17 @@ public final class RequestBody {
         JsonNodes.setBool(node, "required", required);
     }
 
-    public List<String> getContentTypes() {
-        List<String> types = new ArrayList<>();
-        var content = node.get("content");
-        if (content instanceof ObjectNode objectNode) {
-            Iterator<String> it = objectNode.fieldNames();
-            while (it.hasNext()) {
-                types.add(it.next());
-            }
-        }
-        return types;
+    /** The media types this body accepts. */
+    public Content getContent() {
+        return new Content(node);
     }
 
+    public List<String> getContentTypes() {
+        return getContent().mediaTypes();
+    }
+
+    /** The schema for {@code mediaType}, creating it and any missing parent. */
     public Schema getSchema(String mediaType) {
-        ObjectNode content = JsonNodes.objectChild(node, "content");
-        ObjectNode mediaTypeNode = JsonNodes.objectChild(content, mediaType);
-        return new Schema(JsonNodes.objectChild(mediaTypeNode, "schema"));
+        return getContent().add(mediaType).getSchema();
     }
 }
