@@ -14,6 +14,10 @@ public final class Components {
         return new Schemas(node.child("schemas"));
     }
 
+    public ComponentResponses getResponses() {
+        return new ComponentResponses(node.child(ComponentResponses.SECTION));
+    }
+
     public SecuritySchemes getSecuritySchemes() {
         return new SecuritySchemes(node.child("securitySchemes"));
     }

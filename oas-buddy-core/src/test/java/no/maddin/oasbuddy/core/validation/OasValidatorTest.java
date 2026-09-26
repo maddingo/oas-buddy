@@ -26,6 +26,13 @@ class OasValidatorTest {
         assertTrue(result.isValid(), () -> "Unexpected messages: " + result.messages());
     }
 
+    /** Component responses, and operations referring to them instead of defining their own. */
+    @Test
+    void reusableComponentsFixtureHasNoErrors() throws IOException {
+        ValidationResult result = validator.validate(readFixture("reusable.yaml"));
+        assertTrue(result.isValid(), () -> "Unexpected messages: " + result.messages());
+    }
+
     @Test
     void invalidFixtureHasErrors() throws IOException {
         ValidationResult result = validator.validate(readFixture("invalid.yaml"));

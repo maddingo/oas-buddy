@@ -58,7 +58,8 @@ class OperationPaneTagsTest extends ApplicationTest {
 
     private void rebuild() {
         holder.getChildren().setAll(OperationPane.build(operation(), List::of,
-                TagCatalog.of(document), SecuritySchemeCatalog.of(document), () -> { }));
+                TagCatalog.of(document), SecuritySchemeCatalog.of(document),
+                ResponseCatalog.of(document), (question, details) -> true, () -> { }));
     }
 
     private Operation operation() {

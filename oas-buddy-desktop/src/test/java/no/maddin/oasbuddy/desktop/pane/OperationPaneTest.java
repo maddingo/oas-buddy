@@ -27,7 +27,8 @@ class OperationPaneTest extends ApplicationTest {
         operation.setOperationId("listPets");
 
         Node pane = OperationPane.build(operation, List::of, TagCatalog.of(document),
-                SecuritySchemeCatalog.of(document), removalRequests::incrementAndGet);
+                SecuritySchemeCatalog.of(document), ResponseCatalog.of(document), (question, details) -> true,
+                removalRequests::incrementAndGet);
         stage.setScene(new Scene(new StackPane(pane), 900, 700));
         stage.show();
     }
