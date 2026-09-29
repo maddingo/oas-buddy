@@ -7,11 +7,8 @@ import no.maddin.oasbuddy.core.model.ExternalDocs;
 import no.maddin.oasbuddy.core.model.Info;
 import no.maddin.oasbuddy.core.model.Paths;
 import no.maddin.oasbuddy.core.model.SecurityRequirements;
-import no.maddin.oasbuddy.core.model.Server;
+import no.maddin.oasbuddy.core.model.Servers;
 import no.maddin.oasbuddy.core.model.Tags;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Facade over an OpenAPI document tree. The tree (a Jackson {@link ObjectNode}) is the
@@ -63,26 +60,9 @@ public final class OasDocument {
         return new Info(JsonNodes.objectChild(root, "info"));
     }
 
-    public List<Server> getServers() {
-        var array = JsonNodes.arrayChild(root, "servers");
-        List<Server> servers = new ArrayList<>();
-        for (var element : array) {
-            if (element instanceof ObjectNode objectNode) {
-                servers.add(new Server(objectNode));
-            }
-        }
-        return servers;
-    }
-
-    public Server addServer(String url) {
-        var array = JsonNodes.arrayChild(root, "servers");
-        ObjectNode node = array.addObject();
-        node.put("url", url);
-        return new Server(node);
-    }
-
-    public void removeServer(int index) {
-        JsonNodes.arrayChild(root, "servers").remove(index);
+    /** The document-level servers. Reading never adds the key; see {@link Servers}. */
+    public Servers getServers() {
+        return new Servers(root);
     }
 
     /** The document-wide default security, which operations inherit unless they override it. */

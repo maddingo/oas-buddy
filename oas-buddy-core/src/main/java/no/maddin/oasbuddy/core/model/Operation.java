@@ -27,6 +27,20 @@ public final class Operation {
         return new ExternalDocs(node);
     }
 
+    /** This item's own server override; absent inherits the document servers. See {@link Servers}. */
+    public Servers getServers() {
+        return new Servers(node);
+    }
+
+    public boolean isDeprecated() {
+        return Boolean.TRUE.equals(JsonNodes.bool(node, "deprecated"));
+    }
+
+    /** Only {@code true} is written; false removes the key, like the schema flags. */
+    public void setDeprecated(boolean deprecated) {
+        JsonNodes.setBool(node, "deprecated", deprecated ? Boolean.TRUE : null);
+    }
+
     public String getOperationId() {
         return JsonNodes.text(node, "operationId");
     }

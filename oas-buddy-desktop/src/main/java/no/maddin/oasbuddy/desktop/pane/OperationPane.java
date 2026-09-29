@@ -45,7 +45,9 @@ public final class OperationPane {
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
         FormFields.textRow(grid, row++, "Summary", operation::getSummary, operation::setSummary);
-        FormFields.textAreaRow(grid, row, "Description", operation::getDescription, operation::setDescription);
+        FormFields.textAreaRow(grid, row++, "Description", operation::getDescription, operation::setDescription);
+        FormFields.checkBoxRow(grid, row, "Deprecated", operation::isDeprecated, operation::setDeprecated)
+                .getStyleClass().add("operation-deprecated");
 
         VBox tagsBox = new VBox(8);
         buildTags(operation, tagsBox, tagCatalog);
@@ -83,7 +85,8 @@ public final class OperationPane {
                 FormFields.heading("Parameters"), parametersBox,
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
-                FormFields.heading("Security"), securityBox);
+                FormFields.heading("Security"), securityBox,
+                FormFields.heading("Servers"), ServersEditor.override(operation.getServers(), confirmation, "operation"));
     }
 
     /**
