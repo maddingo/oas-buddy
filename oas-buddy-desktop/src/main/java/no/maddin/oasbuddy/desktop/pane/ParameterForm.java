@@ -26,11 +26,15 @@ final class ParameterForm {
         return field;
     }
 
-    static ComboBox<String> inBox(Parameter parameter) {
+    /** @param onChanged run after the new location is written, e.g. to rebuild what depends on it */
+    static ComboBox<String> inBox(Parameter parameter, Runnable onChanged) {
         ComboBox<String> box = new ComboBox<>();
         box.getItems().addAll(LOCATIONS);
         box.setValue(parameter.getIn());
-        box.valueProperty().addListener((obs, oldVal, newVal) -> parameter.setIn(newVal));
+        box.valueProperty().addListener((obs, oldVal, newVal) -> {
+            parameter.setIn(newVal);
+            onChanged.run();
+        });
         return box;
     }
 
@@ -39,6 +43,21 @@ final class ParameterForm {
         box.setSelected(Boolean.TRUE.equals(parameter.isRequired()));
         box.selectedProperty().addListener((obs, oldVal, newVal) -> parameter.setRequired(newVal));
         return box;
+    }
+
+    /**
+     * The type field, or for a parameter that uses {@code content} instead of {@code schema} a note
+     * saying so: typing a type there would add a {@code schema} beside the {@code content}, which
+     * the spec does not allow.
+     */
+    static javafx.scene.Node typeControl(Parameter parameter) {
+        if (parameter.hasContent()) {
+            javafx.scene.control.Label note = new javafx.scene.control.Label("content: "
+                    + String.join(", ", parameter.getContent().mediaTypes()));
+            note.getStyleClass().add("text-muted");
+            return note;
+        }
+        return typeField(parameter);
     }
 
     /**

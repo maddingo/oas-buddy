@@ -363,7 +363,7 @@ public class MainApp extends Application {
         parametersItem.setExpanded(true);
         for (String key : document.getComponents().getParameters().names()) {
             parametersItem.getChildren().add(new TreeItem<>(new OutlineNode(key,
-                    () -> ParameterPane.build(document, key, this::removeParameter))));
+                    () -> ParameterPane.build(document, key, replaceConfirmation, this::removeParameter))));
         }
         root.getChildren().add(parametersItem);
 

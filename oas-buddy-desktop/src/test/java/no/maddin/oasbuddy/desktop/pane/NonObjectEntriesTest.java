@@ -80,7 +80,7 @@ class NonObjectEntriesTest extends ApplicationTest {
 
     @Test
     void theParameterEditorExplainsInsteadOfCrashing() {
-        assertExplains(() -> ParameterPane.build(document, "Odd", name -> { }));
+        assertExplains(() -> ParameterPane.build(document, "Odd", (q, d) -> true, name -> { }));
     }
 
     @Test

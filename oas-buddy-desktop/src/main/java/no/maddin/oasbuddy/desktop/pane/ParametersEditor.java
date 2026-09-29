@@ -86,6 +86,7 @@ final class ParametersEditor {
         HBox row = new HBox(8);
         row.getStyleClass().addAll("parameter-row", Styles.BORDERED);
         row.setAlignment(Pos.CENTER_LEFT);
+        ParameterSerialization serialization = null;
 
         if (parameter.isReference() && parameter.getReferencedParameterName() == null) {
             // a reference this editor cannot follow (another file, another section): shown, not edited
@@ -97,11 +98,13 @@ final class ParametersEditor {
             if (parameter.isReference()) {
                 row.getChildren().add(resolved(catalog.parameter(parameter.getReferencedParameterName())));
             } else {
+                serialization = new ParameterSerialization(parameter, catalog, confirmation);
+                ParameterSerialization shown = serialization;
                 row.getChildren().addAll(
                         new Label("Name"), ParameterForm.nameField(parameter),
-                        new Label("In"), ParameterForm.inBox(parameter),
+                        new Label("In"), ParameterForm.inBox(parameter, shown::refresh),
                         ParameterForm.requiredBox(parameter),
-                        new Label("Type"), ParameterForm.typeField(parameter));
+                        new Label("Type"), ParameterForm.typeControl(parameter));
             }
         }
 
@@ -112,7 +115,12 @@ final class ParametersEditor {
             refresh.run();
         });
         row.getChildren().add(removeButton);
-        return row;
+        if (serialization == null) {
+            return row;
+        }
+        VBox card = new VBox(4, row, serialization.node());
+        card.getStyleClass().add("parameter-card");
+        return card;
     }
 
     /** What a reference stands for, so the row says more than a component key. */
