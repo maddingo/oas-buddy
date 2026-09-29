@@ -56,6 +56,11 @@ public final class ApiResponse {
         return node.size() == 1 && node.has(DESCRIPTION) && (description == null || description.isBlank());
     }
 
+    /** The headers this response declares. Reading never adds the key. */
+    public ResponseHeaders getHeaders() {
+        return new ResponseHeaders(node);
+    }
+
     /** The media types this response carries. */
     public Content getContent() {
         return new Content(node);

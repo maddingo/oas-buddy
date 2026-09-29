@@ -51,6 +51,24 @@ class ReferenceCheckTest {
     }
 
     @Test
+    void aDanglingHeaderReferenceIsReportedOnce() {
+        List<String> messages = messages("""
+                paths:
+                  /pets:
+                    get:
+                      responses:
+                        '200':
+                          description: ok
+                          headers:
+                            X-Rate:
+                              $ref: '#/components/headers/Rate'
+                """);
+
+        assertEquals(List.of("Reference #/components/headers/Rate does not resolve "
+                + "(at paths → /pets → get → responses → 200 → headers → X-Rate)"), messages);
+    }
+
+    @Test
     void aDanglingParameterReferenceIsReportedOnce() {
         List<String> messages = messages("""
                 paths:

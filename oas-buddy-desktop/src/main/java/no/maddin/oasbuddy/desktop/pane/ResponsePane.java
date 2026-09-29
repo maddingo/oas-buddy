@@ -38,6 +38,8 @@ public final class ResponsePane {
 
         return FormFields.root(header, grid,
                 FormFields.heading("Content"),
-                ContentEditor.build(response.getContent(), schemaNames, ComponentCatalog.of(document), confirmation));
+                ContentEditor.build(response.getContent(), schemaNames, ComponentCatalog.of(document), confirmation),
+                FormFields.heading("Headers"),
+                HeadersEditor.build(response.getHeaders(), ComponentCatalog.of(document), confirmation));
     }
 }

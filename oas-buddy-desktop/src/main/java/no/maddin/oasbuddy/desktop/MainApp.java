@@ -23,6 +23,9 @@ import no.maddin.oasbuddy.desktop.pane.ComponentCatalog;
 import no.maddin.oasbuddy.desktop.pane.ExamplePane;
 import no.maddin.oasbuddy.desktop.pane.ExampleRemoval;
 import no.maddin.oasbuddy.desktop.pane.ExamplesPane;
+import no.maddin.oasbuddy.desktop.pane.HeaderPane;
+import no.maddin.oasbuddy.desktop.pane.HeaderRemoval;
+import no.maddin.oasbuddy.desktop.pane.HeadersPane;
 import no.maddin.oasbuddy.desktop.pane.ParameterPane;
 import no.maddin.oasbuddy.desktop.pane.ParameterRemoval;
 import no.maddin.oasbuddy.desktop.pane.ParametersPane;
@@ -373,6 +376,15 @@ public class MainApp extends Application {
         }
         root.getChildren().add(examplesItem);
 
+        TreeItem<OutlineNode> headersItem = new TreeItem<>(new OutlineNode(
+                "Headers", () -> HeadersPane.build(document, this::refreshOutline, this::removeHeader)));
+        headersItem.setExpanded(true);
+        for (String name : document.getComponents().getHeaders().names()) {
+            headersItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
+                    () -> HeaderPane.build(document, name, this::removeHeader))));
+        }
+        root.getChildren().add(headersItem);
+
         TreeItem<OutlineNode> securitySchemesItem = new TreeItem<>(new OutlineNode(
                 "Security Schemes",
                 () -> SecuritySchemesPane.build(document, this::refreshOutline, this::removeSecurityScheme)));
@@ -409,6 +421,11 @@ public class MainApp extends Application {
     private void removeExample(String exampleName) {
         ExampleRemoval.remove(document, exampleName, confirmation,
                 () -> refreshAndSelect("Examples"));
+    }
+
+    private void removeHeader(String headerName) {
+        HeaderRemoval.remove(document, headerName, confirmation,
+                () -> refreshAndSelect("Headers"));
     }
 
     private void removeTag(String tagName) {

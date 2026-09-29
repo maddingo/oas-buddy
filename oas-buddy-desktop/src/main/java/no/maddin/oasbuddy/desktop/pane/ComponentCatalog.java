@@ -3,12 +3,13 @@ package no.maddin.oasbuddy.desktop.pane;
 import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.ApiResponse;
 import no.maddin.oasbuddy.core.model.Example;
+import no.maddin.oasbuddy.core.model.Header;
 import no.maddin.oasbuddy.core.model.Parameter;
 
 import java.util.List;
 
 /**
- * What may be referred to instead of defined inline: the responses, parameters and examples
+ * What may be referred to instead of defined inline: the responses, parameters, examples and headers
  * declared under {@code components}. One interface for every kind, rather than one per kind, so
  * {@link OperationPane} does not grow a parameter each time another kind becomes referable; an
  * interface rather than the document for the same reason as {@link SecuritySchemeCatalog} — the
@@ -33,6 +34,12 @@ public interface ComponentCatalog {
 
     /** The declared example, or {@code null} if there is none by that name. */
     Example example(String name);
+
+    /** The declared header names, in document order. */
+    List<String> headerNames();
+
+    /** The declared header, or {@code null} if there is none by that name. */
+    Header header(String name);
 
     /** Reads straight off the document, so the catalog is never stale. */
     static ComponentCatalog of(OasDocument document) {
@@ -60,6 +67,16 @@ public interface ComponentCatalog {
             @Override
             public List<String> exampleNames() {
                 return document.getComponents().getExamples().names();
+            }
+
+            @Override
+            public List<String> headerNames() {
+                return document.getComponents().getHeaders().names();
+            }
+
+            @Override
+            public Header header(String name) {
+                return document.getComponents().getHeaders().getHeader(name);
             }
 
             @Override

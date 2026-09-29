@@ -310,6 +310,10 @@ public final class OperationPane {
                     row.getChildren().addAll(new Label("Description"), ResponseForm.descriptionField(response));
                     card.getChildren().add(
                             ContentEditor.build(response.getContent(), schemaNames, responseCatalog, confirmation));
+                    Label headersTitle = new Label("Headers");
+                    headersTitle.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.TEXT_SMALL);
+                    card.getChildren().addAll(headersTitle,
+                            HeadersEditor.build(response.getHeaders(), responseCatalog, confirmation));
                 }
             }
 
