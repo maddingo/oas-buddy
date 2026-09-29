@@ -23,6 +23,10 @@ public final class Operation {
         return new SecurityRequirements(node);
     }
 
+    public ExternalDocs getExternalDocs() {
+        return new ExternalDocs(node);
+    }
+
     public String getOperationId() {
         return JsonNodes.text(node, "operationId");
     }

@@ -78,6 +78,7 @@ public final class OperationPane {
         return FormFields.root(
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
+                ExternalDocsSection.build(operation.getExternalDocs()),
                 FormFields.heading("Tags"), tagsBox,
                 FormFields.heading("Parameters"), parametersBox,
                 FormFields.heading("Request body"), requestBodyBox,

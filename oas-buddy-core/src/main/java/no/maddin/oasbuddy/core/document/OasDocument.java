@@ -3,6 +3,7 @@ package no.maddin.oasbuddy.core.document;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import no.maddin.oasbuddy.core.model.Components;
+import no.maddin.oasbuddy.core.model.ExternalDocs;
 import no.maddin.oasbuddy.core.model.Info;
 import no.maddin.oasbuddy.core.model.Paths;
 import no.maddin.oasbuddy.core.model.SecurityRequirements;
@@ -87,6 +88,10 @@ public final class OasDocument {
     /** The document-wide default security, which operations inherit unless they override it. */
     public SecurityRequirements getSecurity() {
         return new SecurityRequirements(root);
+    }
+
+    public ExternalDocs getExternalDocs() {
+        return new ExternalDocs(root);
     }
 
     public Paths getPaths() {

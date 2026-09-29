@@ -305,7 +305,7 @@ public class MainApp extends Application {
         root.setExpanded(true);
 
         root.getChildren().add(new TreeItem<>(
-                new OutlineNode("Info", () -> InfoPane.build(document.getInfo()))));
+                new OutlineNode("Info", () -> InfoPane.build(document.getInfo(), document.getExternalDocs()))));
         root.getChildren().add(new TreeItem<>(
                 new OutlineNode("Servers", () -> ServersPane.build(document))));
         root.getChildren().add(new TreeItem<>(new OutlineNode(

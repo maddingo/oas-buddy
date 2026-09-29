@@ -1,5 +1,6 @@
 package no.maddin.oasbuddy.desktop.pane;
 
+import no.maddin.oasbuddy.core.model.ExternalDocs;
 import no.maddin.oasbuddy.core.model.Info;
 import javafx.scene.Node;
 import javafx.scene.control.TitledPane;
@@ -11,7 +12,7 @@ public final class InfoPane {
     private InfoPane() {
     }
 
-    public static Node build(Info info) {
+    public static Node build(Info info, ExternalDocs externalDocs) {
         GridPane general = FormFields.grid();
         int row = 0;
         FormFields.textRow(general, row++, "Title", info::getTitle, info::setTitle);
@@ -31,6 +32,7 @@ public final class InfoPane {
         return FormFields.root(
                 new VBox(10, FormFields.heading("General"), general),
                 new TitledPane("Contact", contact),
-                new TitledPane("License", license));
+                new TitledPane("License", license),
+                ExternalDocsSection.build(externalDocs));
     }
 }
