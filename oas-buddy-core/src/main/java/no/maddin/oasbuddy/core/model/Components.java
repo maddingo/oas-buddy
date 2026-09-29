@@ -26,6 +26,10 @@ public final class Components {
         return new ComponentExamples(node.child(ComponentExamples.SECTION));
     }
 
+    public ComponentHeaders getHeaders() {
+        return new ComponentHeaders(node.child(ComponentHeaders.SECTION));
+    }
+
     public SecuritySchemes getSecuritySchemes() {
         return new SecuritySchemes(node.child("securitySchemes"));
     }

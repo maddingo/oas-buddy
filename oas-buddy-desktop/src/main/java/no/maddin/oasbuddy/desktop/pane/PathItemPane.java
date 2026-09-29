@@ -90,6 +90,7 @@ public final class PathItemPane {
                 FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath),
                 grid,
                 FormFields.heading("Parameters"), parametersNote, parameters,
+                FormFields.heading("Servers"), ServersEditor.override(pathItem.getServers(), confirmation, "path"),
                 FormFields.heading("Operations"), operations,
                 addOperationLabel, methodButtons);
     }

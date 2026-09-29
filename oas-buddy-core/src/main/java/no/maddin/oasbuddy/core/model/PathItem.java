@@ -35,6 +35,11 @@ public final class PathItem {
         return new Parameters(node);
     }
 
+    /** This item's own server override; absent inherits the document servers. See {@link Servers}. */
+    public Servers getServers() {
+        return new Servers(node);
+    }
+
     public Map<HttpMethod, Operation> getOperations() {
         Map<HttpMethod, Operation> operations = new EnumMap<>(HttpMethod.class);
         for (HttpMethod method : HttpMethod.values()) {

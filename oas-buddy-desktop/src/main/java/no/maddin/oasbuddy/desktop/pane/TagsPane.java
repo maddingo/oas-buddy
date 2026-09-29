@@ -87,6 +87,7 @@ public final class TagsPane {
             removeButton.setOnAction(e -> onRemoveTag.accept(name));
 
             list.addRow(row++, new Label(name), descriptionField, removeButton);
+            list.add(ExternalDocsSection.build(tag.getExternalDocs()), 1, row++);
         }
     }
 

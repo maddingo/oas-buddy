@@ -6,8 +6,8 @@ import no.maddin.oasbuddy.core.document.JsonNodes;
 /**
  * One entry in the root {@code tags} array.
  *
- * <p>Only {@code name} and {@code description} are editable for now; {@code externalDocs} and any
- * {@code x-} extension are left untouched, the same bargain {@code SecurityScheme.setType} makes for
+ * <p>Only {@code name}, {@code description} and {@code externalDocs} are editable for now; any
+ * {@code x-} extension is left untouched, the same bargain {@code SecurityScheme.setType} makes for
  * fields it cannot edit. There is deliberately no {@code setName}: renaming a tag would need to walk
  * every operation that names it, which is out of scope for now — {@link Tags#remove} and
  * {@link TagUsages} are enough to let a user delete and recreate one instead.
@@ -18,6 +18,10 @@ public final class Tag {
 
     public Tag(ObjectNode node) {
         this.node = node;
+    }
+
+    public ExternalDocs getExternalDocs() {
+        return new ExternalDocs(node);
     }
 
     public String getName() {

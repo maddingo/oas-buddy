@@ -155,6 +155,7 @@ public final class SchemaPane {
         return FormFields.root(
                 FormFields.headerWithRenameAndDelete("Schema", nameField, "delete-schema", "Delete schema",
                         () -> onRemoveSchema.accept(schemaName)), grid,
+                ExternalDocsSection.build(schema.getExternalDocs()),
                 FormFields.heading("Values"), values,
                 FormFields.heading("Constraints"), constraints.node(),
                 FormFields.heading("Properties"), properties.grid(),

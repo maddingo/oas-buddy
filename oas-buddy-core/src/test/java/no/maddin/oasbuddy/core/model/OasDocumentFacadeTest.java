@@ -26,7 +26,7 @@ class OasDocumentFacadeTest {
         assertEquals("API Support", info.getContact().getName());
         assertEquals("Apache 2.0", info.getLicense().getName());
 
-        List<Server> servers = document.getServers();
+        List<Server> servers = document.getServers().all();
         assertEquals(1, servers.size());
         assertEquals("https://api.example.com/v1", servers.get(0).getUrl());
 
@@ -58,7 +58,7 @@ class OasDocumentFacadeTest {
         document.getInfo().setTitle("My API");
         assertEquals("My API", document.getRoot().get("info").get("title").asText());
 
-        Server server = document.addServer("https://example.com");
+        Server server = document.getServers().add("https://example.com");
         server.setDescription("Example server");
         assertEquals("https://example.com", document.getRoot().get("servers").get(0).get("url").asText());
 

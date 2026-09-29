@@ -45,7 +45,9 @@ public final class OperationPane {
         int row = 0;
         FormFields.textRow(grid, row++, "Operation ID", operation::getOperationId, operation::setOperationId);
         FormFields.textRow(grid, row++, "Summary", operation::getSummary, operation::setSummary);
-        FormFields.textAreaRow(grid, row, "Description", operation::getDescription, operation::setDescription);
+        FormFields.textAreaRow(grid, row++, "Description", operation::getDescription, operation::setDescription);
+        FormFields.checkBoxRow(grid, row, "Deprecated", operation::isDeprecated, operation::setDeprecated)
+                .getStyleClass().add("operation-deprecated");
 
         VBox tagsBox = new VBox(8);
         buildTags(operation, tagsBox, tagCatalog);
@@ -78,11 +80,13 @@ public final class OperationPane {
         return FormFields.root(
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
+                ExternalDocsSection.build(operation.getExternalDocs()),
                 FormFields.heading("Tags"), tagsBox,
                 FormFields.heading("Parameters"), parametersBox,
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
-                FormFields.heading("Security"), securityBox);
+                FormFields.heading("Security"), securityBox,
+                FormFields.heading("Servers"), ServersEditor.override(operation.getServers(), confirmation, "operation"));
     }
 
     /**
@@ -306,6 +310,10 @@ public final class OperationPane {
                     row.getChildren().addAll(new Label("Description"), ResponseForm.descriptionField(response));
                     card.getChildren().add(
                             ContentEditor.build(response.getContent(), schemaNames, responseCatalog, confirmation));
+                    Label headersTitle = new Label("Headers");
+                    headersTitle.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.TEXT_SMALL);
+                    card.getChildren().addAll(headersTitle,
+                            HeadersEditor.build(response.getHeaders(), responseCatalog, confirmation));
                 }
             }
 

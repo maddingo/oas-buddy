@@ -60,6 +60,10 @@ public final class Schema {
         setRef(COMPONENT_REF_PREFIX + schemaName);
     }
 
+    public ExternalDocs getExternalDocs() {
+        return new ExternalDocs(node);
+    }
+
     public String getType() {
         return JsonNodes.text(node, TYPE);
     }
