@@ -29,6 +29,7 @@ public final class OasValidator {
         messages.addAll(checkConstraints(content));
         messages.addAll(checkTags(content));
         messages.addAll(checkReferences(content));
+        messages.addAll(checkLinks(content));
         return new ValidationResult(messages);
     }
 
@@ -54,6 +55,15 @@ public final class OasValidator {
     private static List<ValidationMessage> checkTags(String content) {
         try {
             return TagCheck.check(YAML.readTree(content));
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+
+    /** Content swagger-parser could not read has already been reported by it; nothing to add. */
+    private static List<ValidationMessage> checkLinks(String content) {
+        try {
+            return LinkCheck.check(YAML.readTree(content));
         } catch (JsonProcessingException e) {
             return List.of();
         }

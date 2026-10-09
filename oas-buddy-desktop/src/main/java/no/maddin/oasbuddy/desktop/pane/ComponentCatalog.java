@@ -2,14 +2,17 @@ package no.maddin.oasbuddy.desktop.pane;
 
 import no.maddin.oasbuddy.core.document.OasDocument;
 import no.maddin.oasbuddy.core.model.ApiResponse;
+import no.maddin.oasbuddy.core.model.Callback;
 import no.maddin.oasbuddy.core.model.Example;
 import no.maddin.oasbuddy.core.model.Header;
+import no.maddin.oasbuddy.core.model.Link;
+import no.maddin.oasbuddy.core.model.OperationIds;
 import no.maddin.oasbuddy.core.model.Parameter;
 
 import java.util.List;
 
 /**
- * What may be referred to instead of defined inline: the responses, parameters, examples and headers
+ * What may be referred to instead of defined inline: the responses, parameters, examples, headers, links and callbacks
  * declared under {@code components}. One interface for every kind, rather than one per kind, so
  * {@link OperationPane} does not grow a parameter each time another kind becomes referable; an
  * interface rather than the document for the same reason as {@link SecuritySchemeCatalog} — the
@@ -40,6 +43,21 @@ public interface ComponentCatalog {
 
     /** The declared header, or {@code null} if there is none by that name. */
     Header header(String name);
+
+    /** The declared link names, in document order. */
+    List<String> linkNames();
+
+    /** The declared link, or {@code null} if there is none by that name. */
+    Link link(String name);
+
+    /** The operation ids the document's paths declare: what a link may target. */
+    List<String> operationIds();
+
+    /** The declared callback names, in document order. */
+    List<String> callbackNames();
+
+    /** The declared callback, or {@code null} if there is none by that name. */
+    Callback callback(String name);
 
     /** Reads straight off the document, so the catalog is never stale. */
     static ComponentCatalog of(OasDocument document) {
@@ -77,6 +95,31 @@ public interface ComponentCatalog {
             @Override
             public Header header(String name) {
                 return document.getComponents().getHeaders().getHeader(name);
+            }
+
+            @Override
+            public List<String> callbackNames() {
+                return document.getComponents().getCallbacks().names();
+            }
+
+            @Override
+            public Callback callback(String name) {
+                return document.getComponents().getCallbacks().getCallback(name);
+            }
+
+            @Override
+            public List<String> linkNames() {
+                return document.getComponents().getLinks().names();
+            }
+
+            @Override
+            public Link link(String name) {
+                return document.getComponents().getLinks().getLink(name);
+            }
+
+            @Override
+            public List<String> operationIds() {
+                return OperationIds.all(document);
             }
 
             @Override

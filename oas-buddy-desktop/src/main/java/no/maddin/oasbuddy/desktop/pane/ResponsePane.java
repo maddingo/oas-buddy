@@ -40,6 +40,8 @@ public final class ResponsePane {
                 FormFields.heading("Content"),
                 ContentEditor.build(response.getContent(), schemaNames, ComponentCatalog.of(document), confirmation),
                 FormFields.heading("Headers"),
-                HeadersEditor.build(response.getHeaders(), ComponentCatalog.of(document), confirmation));
+                HeadersEditor.build(response.getHeaders(), ComponentCatalog.of(document), confirmation),
+                FormFields.heading("Links"),
+                LinksEditor.build(response.getLinks(), ComponentCatalog.of(document), confirmation));
     }
 }

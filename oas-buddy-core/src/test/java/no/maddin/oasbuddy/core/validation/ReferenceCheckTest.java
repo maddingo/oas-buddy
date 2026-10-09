@@ -69,6 +69,29 @@ class ReferenceCheckTest {
     }
 
     @Test
+    void aDanglingCallbackAndLinkReferenceAreReported() {
+        List<String> messages = messages("""
+                paths:
+                  /pets:
+                    post:
+                      callbacks:
+                        onEvent:
+                          $ref: '#/components/callbacks/Event'
+                      responses:
+                        '201':
+                          description: ok
+                          links:
+                            Next:
+                              $ref: '#/components/links/Next'
+                """);
+
+        assertEquals(List.of(
+                "Reference #/components/callbacks/Event does not resolve (at paths → /pets → post → callbacks → onEvent)",
+                "Reference #/components/links/Next does not resolve "
+                        + "(at paths → /pets → post → responses → 201 → links → Next)"), messages);
+    }
+
+    @Test
     void aDanglingParameterReferenceIsReportedOnce() {
         List<String> messages = messages("""
                 paths:

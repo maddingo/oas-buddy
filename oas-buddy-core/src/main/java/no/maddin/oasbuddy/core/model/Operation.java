@@ -32,6 +32,11 @@ public final class Operation {
         return new Servers(node);
     }
 
+    /** The callbacks this operation declares. Reading never adds the key. */
+    public Callbacks getCallbacks() {
+        return new Callbacks(node);
+    }
+
     public boolean isDeprecated() {
         return Boolean.TRUE.equals(JsonNodes.bool(node, "deprecated"));
     }
