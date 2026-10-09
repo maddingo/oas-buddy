@@ -19,6 +19,9 @@ import no.maddin.oasbuddy.desktop.pane.PathsPane;
 import no.maddin.oasbuddy.desktop.pane.SchemaPane;
 import no.maddin.oasbuddy.desktop.pane.PathRename;
 import no.maddin.oasbuddy.desktop.pane.RemovalConfirmation;
+import no.maddin.oasbuddy.desktop.pane.CallbackPane;
+import no.maddin.oasbuddy.desktop.pane.CallbackRemoval;
+import no.maddin.oasbuddy.desktop.pane.CallbacksPane;
 import no.maddin.oasbuddy.desktop.pane.ComponentCatalog;
 import no.maddin.oasbuddy.desktop.pane.ExamplePane;
 import no.maddin.oasbuddy.desktop.pane.ExampleRemoval;
@@ -26,6 +29,9 @@ import no.maddin.oasbuddy.desktop.pane.ExamplesPane;
 import no.maddin.oasbuddy.desktop.pane.HeaderPane;
 import no.maddin.oasbuddy.desktop.pane.HeaderRemoval;
 import no.maddin.oasbuddy.desktop.pane.HeadersPane;
+import no.maddin.oasbuddy.desktop.pane.LinkPane;
+import no.maddin.oasbuddy.desktop.pane.LinkRemoval;
+import no.maddin.oasbuddy.desktop.pane.LinksPane;
 import no.maddin.oasbuddy.desktop.pane.ParameterPane;
 import no.maddin.oasbuddy.desktop.pane.ParameterRemoval;
 import no.maddin.oasbuddy.desktop.pane.ParametersPane;
@@ -385,6 +391,25 @@ public class MainApp extends Application {
         }
         root.getChildren().add(headersItem);
 
+        TreeItem<OutlineNode> linksItem = new TreeItem<>(new OutlineNode(
+                "Links", () -> LinksPane.build(document, this::refreshOutline, this::removeLink)));
+        linksItem.setExpanded(true);
+        for (String name : document.getComponents().getLinks().names()) {
+            linksItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
+                    () -> LinkPane.build(document, name, this::removeLink))));
+        }
+        root.getChildren().add(linksItem);
+
+        TreeItem<OutlineNode> callbacksItem = new TreeItem<>(new OutlineNode(
+                "Callbacks", () -> CallbacksPane.build(document, this::refreshOutline, this::removeCallback)));
+        callbacksItem.setExpanded(true);
+        for (String name : document.getComponents().getCallbacks().names()) {
+            callbacksItem.getChildren().add(new TreeItem<>(new OutlineNode(name,
+                    () -> CallbackPane.build(document, name, () -> document.getComponents().getSchemas().names(),
+                            replaceConfirmation, this::removeCallback))));
+        }
+        root.getChildren().add(callbacksItem);
+
         TreeItem<OutlineNode> securitySchemesItem = new TreeItem<>(new OutlineNode(
                 "Security Schemes",
                 () -> SecuritySchemesPane.build(document, this::refreshOutline, this::removeSecurityScheme)));
@@ -426,6 +451,16 @@ public class MainApp extends Application {
     private void removeHeader(String headerName) {
         HeaderRemoval.remove(document, headerName, confirmation,
                 () -> refreshAndSelect("Headers"));
+    }
+
+    private void removeLink(String linkName) {
+        LinkRemoval.remove(document, linkName, confirmation,
+                () -> refreshAndSelect("Links"));
+    }
+
+    private void removeCallback(String callbackName) {
+        CallbackRemoval.remove(document, callbackName, confirmation,
+                () -> refreshAndSelect("Callbacks"));
     }
 
     private void removeTag(String tagName) {

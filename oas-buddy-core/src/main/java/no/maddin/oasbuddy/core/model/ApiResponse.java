@@ -61,6 +61,11 @@ public final class ApiResponse {
         return new ResponseHeaders(node);
     }
 
+    /** The links this response declares. Reading never adds the key. */
+    public ResponseLinks getLinks() {
+        return new ResponseLinks(node);
+    }
+
     /** The media types this response carries. */
     public Content getContent() {
         return new Content(node);

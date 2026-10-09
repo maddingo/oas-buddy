@@ -30,6 +30,14 @@ public final class Components {
         return new ComponentHeaders(node.child(ComponentHeaders.SECTION));
     }
 
+    public ComponentLinks getLinks() {
+        return new ComponentLinks(node.child(ComponentLinks.SECTION));
+    }
+
+    public ComponentCallbacks getCallbacks() {
+        return new ComponentCallbacks(node.child(ComponentCallbacks.SECTION));
+    }
+
     public SecuritySchemes getSecuritySchemes() {
         return new SecuritySchemes(node.child("securitySchemes"));
     }

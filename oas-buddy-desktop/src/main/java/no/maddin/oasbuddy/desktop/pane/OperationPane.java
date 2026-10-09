@@ -77,6 +77,10 @@ public final class OperationPane {
         VBox securityBox = new VBox(8);
         buildSecurity(operation, securityBox, catalog);
 
+        VBox callbacksBox = CallbacksEditor.build(operation.getCallbacks(), components, confirmation,
+                editor(schemaNames, tagCatalog, catalog, components, confirmation));
+        callbacksBox.setId("operation-callbacks");
+
         return FormFields.root(
                 FormFields.headerWithDelete("Operation", "delete-operation", "Delete operation",
                         onRemoveOperation), grid,
@@ -86,7 +90,19 @@ public final class OperationPane {
                 FormFields.heading("Request body"), requestBodyBox,
                 FormFields.heading("Responses"), responsesBox, new HBox(8, statusCodeField, addResponseButton),
                 FormFields.heading("Security"), securityBox,
+                FormFields.heading("Callbacks"), callbacksBox,
                 FormFields.heading("Servers"), ServersEditor.override(operation.getServers(), confirmation, "operation"));
+    }
+
+    /**
+     * The editor a callback's nested path item uses for its operations: this very pane, with the
+     * catalogs the enclosing one was given.
+     */
+    static OperationEditor editor(Supplier<List<String>> schemaNames, TagCatalog tagCatalog,
+                                  SecuritySchemeCatalog catalog, ComponentCatalog components,
+                                  RemovalConfirmation confirmation) {
+        return (operation, onRemove) -> build(operation, schemaNames, tagCatalog, catalog, components,
+                confirmation, onRemove);
     }
 
     /**
@@ -314,6 +330,10 @@ public final class OperationPane {
                     headersTitle.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.TEXT_SMALL);
                     card.getChildren().addAll(headersTitle,
                             HeadersEditor.build(response.getHeaders(), responseCatalog, confirmation));
+                    Label linksTitle = new Label("Links");
+                    linksTitle.getStyleClass().addAll(Styles.TEXT_MUTED, Styles.TEXT_SMALL);
+                    card.getChildren().addAll(linksTitle,
+                            LinksEditor.build(response.getLinks(), responseCatalog, confirmation));
                 }
             }
 

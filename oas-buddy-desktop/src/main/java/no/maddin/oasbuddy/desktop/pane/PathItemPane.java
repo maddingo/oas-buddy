@@ -10,17 +10,23 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 public final class PathItemPane {
+
+    static final String OPERATION_CLASS = "nested-operation";
+    static final String ADD_OPERATION_CLASS = "add-nested-operation";
 
     private PathItemPane() {
     }
@@ -51,16 +57,7 @@ public final class PathItemPane {
                     FormFields.notEditable(path, "a path item"));
         }
 
-        GridPane grid = FormFields.grid();
-        int row = 0;
-        FormFields.textRow(grid, row++, "Summary", pathItem::getSummary, pathItem::setSummary);
-        FormFields.textAreaRow(grid, row, "Description", pathItem::getDescription, pathItem::setDescription);
-
-        // declared once here, these apply to every operation on the path
-        VBox parameters = ParametersEditor.build(pathItem.getParameters(), ComponentCatalog.of(document),
-                confirmation, "path-parameters");
-        Label parametersNote = new Label("Apply to every operation on this path.");
-        parametersNote.getStyleClass().add(Styles.TEXT_MUTED);
+        List<Node> fields = fields(pathItem, ComponentCatalog.of(document), confirmation);
 
         GridPane operations = FormFields.grid();
         operations.setId("path-operations");
@@ -86,13 +83,77 @@ public final class PathItemPane {
         Label addOperationLabel = new Label("Add operation");
         addOperationLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
-        return FormFields.root(
-                FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath),
-                grid,
+        List<Node> sections = new ArrayList<>();
+        sections.add(FormFields.headerWithRenameAndDelete("Path", nameField, "delete-path", "Delete path", onRemovePath));
+        sections.addAll(fields);
+        sections.addAll(List.of(FormFields.heading("Operations"), operations, addOperationLabel, methodButtons));
+        return FormFields.root(sections.toArray(Node[]::new));
+    }
+
+    /**
+     * A path item that lives inside another node — a callback's expression — rather than under
+     * {@code paths}: the same summary, description, parameters and servers as a top-level path, and
+     * its operations edited in place with {@code operationEditor} instead of as outline children.
+     *
+     * @param onChanged        run after an operation is added or removed, so the caller rebuilds this view
+     * @param operationEditor  builds the editor for one of its operations
+     */
+    static Node embedded(PathItem pathItem, ComponentCatalog catalog, RemovalConfirmation confirmation,
+                         OperationEditor operationEditor, Runnable onChanged) {
+        List<Node> sections = new ArrayList<>(fields(pathItem, catalog, confirmation));
+        sections.add(FormFields.heading("Operations"));
+        for (var entry : pathItem.getOperations().entrySet()) {
+            HttpMethod method = entry.getKey();
+            Operation operation = entry.getValue();
+            Node editor = operationEditor.create(operation, () -> {
+                if (confirmation.confirm("Remove " + method.name() + "?", PathRemoval.describe(operation))) {
+                    pathItem.removeOperation(method);
+                    onChanged.run();
+                }
+            });
+            TitledPane pane = new TitledPane(PathRemoval.label(method, operation), editor);
+            pane.getStyleClass().add(OPERATION_CLASS);
+            pane.setExpanded(false);
+            sections.add(pane);
+        }
+        if (pathItem.getOperations().isEmpty()) {
+            Label empty = new Label("No operations yet.");
+            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            sections.add(empty);
+        }
+        FlowPane methodButtons = new FlowPane(8, 8);
+        for (HttpMethod method : HttpMethod.values()) {
+            if (!pathItem.getOperations().containsKey(method)) {
+                Button addButton = new Button("+ " + method.name());
+                addButton.getStyleClass().addAll(Styles.SMALL, Styles.BUTTON_OUTLINED, ADD_OPERATION_CLASS);
+                addButton.setOnAction(e -> {
+                    pathItem.addOperation(method);
+                    onChanged.run();
+                });
+                methodButtons.getChildren().add(addButton);
+            }
+        }
+        sections.add(methodButtons);
+        VBox box = new VBox(8, sections.toArray(Node[]::new));
+        return box;
+    }
+
+    /** Summary, description, parameters and servers: what a path item has whether or not it sits under {@code paths}. */
+    private static List<Node> fields(PathItem pathItem, ComponentCatalog catalog, RemovalConfirmation confirmation) {
+        GridPane grid = FormFields.grid();
+        int row = 0;
+        FormFields.textRow(grid, row++, "Summary", pathItem::getSummary, pathItem::setSummary);
+        FormFields.textAreaRow(grid, row, "Description", pathItem::getDescription, pathItem::setDescription);
+
+        // declared once here, these apply to every operation on the path
+        VBox parameters = ParametersEditor.build(pathItem.getParameters(), catalog,
+                confirmation, "path-parameters");
+        Label parametersNote = new Label("Apply to every operation on this path.");
+        parametersNote.getStyleClass().add(Styles.TEXT_MUTED);
+
+        return List.of(grid,
                 FormFields.heading("Parameters"), parametersNote, parameters,
-                FormFields.heading("Servers"), ServersEditor.override(pathItem.getServers(), confirmation, "path"),
-                FormFields.heading("Operations"), operations,
-                addOperationLabel, methodButtons);
+                FormFields.heading("Servers"), ServersEditor.override(pathItem.getServers(), confirmation, "path"));
     }
 
     private static void fillOperations(PathItem pathItem, GridPane operations,
